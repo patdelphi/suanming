@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/services/configService';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, FileText, FileImage, File, Loader2, ChevronDown, Printer, Camera } from 'lucide-react';
@@ -386,10 +387,8 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({
         throw new Error('请先登录');
       }
 
-      // 获取正确的API基础URL
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-        (import.meta.env.DEV ? 'http://localhost:3001/api' : 
-         (window.location.hostname.includes('koyeb.app') ? `${window.location.origin}/api` : `${window.location.origin}/api`));
+      // 使用统一的方法获取API基础URL
+      const API_BASE_URL = await getApiBaseUrl();
 
       // 调用后端下载API
       const response = await fetch(`${API_BASE_URL}/download`, {

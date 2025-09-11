@@ -1,4 +1,5 @@
-import { getAIConfig, validateAIConfig, getPromptTemplate } from '../config/aiConfig';
+import { getApiBaseUrl } from '@/services/configService';
+import { getAIConfigAsync, validateAIConfig, getPromptTemplate } from '../config/aiConfig';
 
 // AI解读结果接口
 export interface AIInterpretationResult {
@@ -746,7 +747,7 @@ export const requestAIInterpretation = async (request: AIInterpretationRequest):
   
   try {
     // 获取AI配置
-    const config = getAIConfig();
+    const config = await getAIConfigAsync();
     
     // 验证配置
     if (!validateAIConfig(config)) {
@@ -772,9 +773,7 @@ export const requestAIInterpretation = async (request: AIInterpretationRequest):
       }
       
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-          (import.meta.env.DEV ? 'http://localhost:3001/api' : 
-           (window.location.hostname.includes('koyeb.app') ? `${window.location.origin}/api` : `${window.location.origin}/api`));
+        const API_BASE_URL = await getApiBaseUrl();
         
         // 智能提取分析数据
         let serverAnalysisData = request.analysisContent;
@@ -986,9 +985,7 @@ export const saveAIInterpretation = async (readingId: number, result: AIInterpre
       throw new Error('需要登录才能保存AI解读结果');
     }
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-      (import.meta.env.DEV ? 'http://localhost:3001/api' : 
-        (window.location.hostname.includes('koyeb.app') ? `${window.location.origin}/api` : `${window.location.origin}/api`));
+    const API_BASE_URL = await getApiBaseUrl();
 
     const response = await fetch(`${API_BASE_URL}/ai-interpretation/save`, {
       method: 'POST',
@@ -1030,9 +1027,7 @@ export const getAIInterpretation = async (readingId: number): Promise<AIInterpre
     const token = localStorage.getItem('auth_token');
     if (token) {
       // 优先从数据库获取
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-        (import.meta.env.DEV ? 'http://localhost:3001/api' : 
-          (window.location.hostname.includes('koyeb.app') ? `${window.location.origin}/api` : `${window.location.origin}/api`));
+      const API_BASE_URL = await getApiBaseUrl();
 
       const response = await fetch(`${API_BASE_URL}/ai-interpretation/get/${readingId}`, {
         headers: {

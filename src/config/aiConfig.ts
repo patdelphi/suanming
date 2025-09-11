@@ -1,3 +1,5 @@
+import { getRuntimeAIConfig } from '@/services/configService';
+
 // AI解读功能配置文件
 export interface AIConfig {
   apiKey: string;
@@ -11,8 +13,8 @@ export interface AIConfig {
 
 // 默认AI配置
 export const defaultAIConfig: AIConfig = {
-  apiKey: import.meta.env.VITE_AI_API_KEY || 'dee444451bdf4232920a88ef430ce753.Z4SAbECrSnf5JMq7',
-  apiUrl: import.meta.env.VITE_AI_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+  apiKey: import.meta.env.VITE_AI_API_KEY || '',
+  apiUrl: import.meta.env.VITE_AI_API_URL || '',
   modelName: import.meta.env.VITE_AI_MODEL_NAME || 'GLM-4.5',
   maxTokens: parseInt(import.meta.env.VITE_AI_MAX_TOKENS || '50000'),
   temperature: parseFloat(import.meta.env.VITE_AI_TEMPERATURE || '0.6'),
@@ -103,10 +105,34 @@ export const getAIConfig = (): AIConfig => {
   return defaultAIConfig;
 };
 
-// 保存AI配置
-export const saveAIConfig = (config: Partial<AIConfig>): void => {
+// 异步版本的getAIConfig
+export const getAIConfigAsync = async (): Promise<AIConfig> => {
   try {
-    const currentConfig = getAIConfig();
+    // 获取后端配置
+    const runtimeConfig = await getRuntimeAIConfig();
+    
+    // 获取用户自定义配置
+    const savedConfig = localStorage.getItem('ai-config');
+    if (savedConfig) {
+      try {
+        const parsedConfig = JSON.parse(savedConfig);
+        return { ...runtimeConfig, ...parsedConfig };
+      } catch (error) {
+        // 解析失败，仅使用运行时配置
+      }
+    }
+    return runtimeConfig;
+  } catch (error) {
+    console.error('Error getting AI config:', error);
+    // 出错时回退到getAIConfig
+    return getAIConfig();
+  }
+};
+
+// 保存AI配置
+export const saveAIConfig = async (config: Partial<AIConfig>): Promise<void> => {
+  try {
+    const currentConfig = await getAIConfigAsync();
     const newConfig = { ...currentConfig, ...config };
     localStorage.setItem('ai-config', JSON.stringify(newConfig));
   } catch (error) {

@@ -59,9 +59,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
+      scriptSrc: ["'self'", "https:", "http:"],
+      imgSrc: ["'self'", "data:", "https:", "http:"],
       connectSrc: [
         "'self'",
         "https://api.openai.com",
@@ -72,7 +72,9 @@ app.use(helmet({
       ],
     },
   },
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  // 禁用所有可能导致 HTTPS 强制的设置
+  hsts: false,
 }));
 
 // CORS配置
@@ -131,6 +133,22 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/download', downloadRoutes);
 app.use('/api/ai-interpretation', aiInterpretationRoutes);
 app.use('/api/qimen', qimenRoutes);
+app.get('/api/config', (req, res) => {
+  res.json({
+    // AI相关配置
+    ai: {
+      apiKey: process.env.VITE_AI_API_KEY || '',
+      apiUrl: process.env.VITE_AI_API_URL || '',
+      modelName: process.env.VITE_AI_MODEL_NAME || 'GLM-4.5',
+      maxTokens: process.env.VITE_AI_MAX_TOKENS || '50000',
+      temperature: process.env.VITE_AI_TEMPERATURE || '0.6',
+      timeout: process.env.VITE_AI_TIMEOUT || '120000',
+      stream: process.env.VITE_AI_STREAM !== 'false'
+    },
+    // API基础URL（可选，前端通常可以自动确定）
+    apiBaseUrl: process.env.VITE_API_BASE_URL || ''
+  });
+});
 
 // 静态文件服务 (用于生产环境)
 // 强制在 Koyeb 部署时启用静态文件服务
@@ -158,6 +176,8 @@ if (isProduction) {
   // 配置静态文件服务，明确设置MIME类型
   app.use(express.static(distPath, {
     setHeaders: (res, path) => {
+      res.setHeader('Strict-Transport-Security', 'max-age=0');
+      res.setHeader('Content-Security-Policy', "default-src 'self' http: https:");
       if (path.endsWith('.css')) {
         res.setHeader('Content-Type', 'text/css');
       } else if (path.endsWith('.js')) {
@@ -189,6 +209,11 @@ if (isProduction) {
     }
     
     if (fs.existsSync(indexPath)) {
+      res.setHeader('Strict-Transport-Security', 'max-age=0');
+      res.setHeader('Content-Security-Policy', "default-src 'self' http: https:");
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(indexPath);
     } else {
       console.error('index.html文件不存在:', indexPath);

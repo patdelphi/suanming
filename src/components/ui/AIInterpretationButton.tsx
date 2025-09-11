@@ -13,7 +13,7 @@ import {
   AIInterpretationRequest,
   convertAnalysisToMarkdown
 } from '../../services/aiInterpretationService';
-import { getAIConfig, validateAIConfig, getPromptTemplate } from '../../config/aiConfig';
+import { getAIConfigAsync, validateAIConfig, getPromptTemplate } from '../../config/aiConfig';
 import { toast } from 'sonner';
 
 interface AIInterpretationButtonProps {
@@ -51,8 +51,11 @@ const AIInterpretationButton: React.FC<AIInterpretationButtonProps> = ({
 
   // 检查AI配置是否有效
   useEffect(() => {
-    const config = getAIConfig();
-    setIsConfigValid(validateAIConfig(config));
+    const checkConfig = async () => {
+      const config = await getAIConfigAsync();
+      setIsConfigValid(validateAIConfig(config));
+    };
+    checkConfig();
   }, []);
 
   // 如果没有recordId，则无法进行AI解读
@@ -91,7 +94,7 @@ const AIInterpretationButton: React.FC<AIInterpretationButtonProps> = ({
     setRequestStartTime(Date.now());
     
     // 获取用户配置的AI设置
-    const currentConfig = getAIConfig();
+    const currentConfig = await getAIConfigAsync();
     
 
     

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Settings, Eye, EyeOff, Save, TestTube, CheckCircle, AlertCircle } from 'lucide-react';
 import { ChineseButton } from './ChineseButton';
 import { ChineseCard, ChineseCardContent, ChineseCardHeader, ChineseCardTitle } from './ChineseCard';
-import { getAIConfig, saveAIConfig, validateAIConfig, AIConfig, defaultAIConfig } from '../../config/aiConfig';
+import { getAIConfigAsync, saveAIConfig, validateAIConfig, AIConfig, defaultAIConfig } from '../../config/aiConfig';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 
@@ -33,11 +33,14 @@ const AIConfigModal: React.FC<AIConfigModalProps> = ({
 
   // 加载当前配置
   useEffect(() => {
-    if (isOpen) {
-      const currentConfig = getAIConfig();
-      setConfig(currentConfig);
-      setTestResult(null);
-    }
+    const loadConfig = async () => {
+      if (isOpen) {
+        const currentConfig = await getAIConfigAsync();
+        setConfig(currentConfig);
+        setTestResult(null);
+      }
+    };
+    loadConfig();
   }, [isOpen]);
 
   // 处理输入变化
