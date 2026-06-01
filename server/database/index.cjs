@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const MigrationManager = require('./migrationManager.cjs');
 
 class DatabaseManager {
   constructor() {
@@ -65,16 +66,17 @@ class DatabaseManager {
   // 初始化数据库结构
   initializeSchema() {
     try {
-      // 首先检查是否需要迁移ai_interpretations表
+      // 使用新的迁移管理系统
+      const migrationManager = new MigrationManager(this.db);
+      
+      // 运行所有待执行的迁移
+      const result = migrationManager.run();
+      
+      console.log(`📊 数据库迁移状态: 当前版本 v${String(result.total).padStart(4, '0')}, 已应用 ${result.applied} 个新迁移`);
+      
+      // 保留旧迁移逻辑以兼容现有数据库（后续版本可移除）
       this.migrateAiInterpretationsTable();
-      
-      // 检查并迁移numerology_readings表以支持qimen类型
       this.migrateQimenSupport();
-      
-      const schema = fs.readFileSync(this.schemaPath, 'utf8');
-      
-      // 直接执行整个schema文件
-      this.db.exec(schema);
       
       console.log('数据库结构初始化完成');
     } catch (error) {
@@ -216,6 +218,18 @@ class DatabaseManager {
     const db = this.getDatabase();
     const transaction = db.transaction(callback);
     return transaction;
+  }
+
+  // 获取迁移状态
+  getMigrationStatus() {
+    const migrationManager = new MigrationManager(this.db);
+    return migrationManager.getStatus();
+  }
+
+  // 回滚到指定版本
+  rollback(targetVersion) {
+    const migrationManager = new MigrationManager(this.db);
+    return migrationManager.rollback(targetVersion);
   }
 
   // 备份数据库

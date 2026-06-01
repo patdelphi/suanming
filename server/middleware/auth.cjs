@@ -2,8 +2,14 @@ const jwt = require('jsonwebtoken');
 const { getDB } = require('../database/index.cjs');
 const { AppError } = require('./errorHandler.cjs');
 
-// JWT密钥 (在生产环境中应该从环境变量读取)
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+// JWT密钥 (生产环境必须设置环境变量，不使用默认值)
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error(
+    'JWT_SECRET 环境变量未设置！为了安全考虑，生产环境必须设置强密码密钥。\n' +
+    '请在 .env 文件中设置：JWT_SECRET=your-very-strong-secret-key-here'
+  );
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 // 生成JWT token

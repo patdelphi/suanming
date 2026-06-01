@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger.cjs');
 const path = require('path');
 const { dbManager } = require('./database/index.cjs');
 
@@ -28,17 +31,30 @@ try {
   // 在生产环境中，确保管理员用户存在
   if (process.env.NODE_ENV === 'production') {
     const db = dbManager.getDatabase();
-    const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@localhost');
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@localhost';
+    const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
     
     if (!adminExists) {
-      const bcrypt = require('bcryptjs');
-      const adminPassword = bcrypt.hashSync('admin123', 12);
+      // 优先使用环境变量设置的密码，否则生成随机密码
+      let adminPassword;
+      let passwordInfo;
+      
+      if (process.env.ADMIN_INITIAL_PASSWORD) {
+        adminPassword = bcrypt.hashSync(process.env.ADMIN_INITIAL_PASSWORD, 12);
+        passwordInfo = '使用环境变量 ADMIN_INITIAL_PASSWORD';
+      } else {
+        // 生成强随机密码
+        const crypto = require('crypto');
+        const randomPassword = crypto.randomBytes(16).toString('hex');
+        adminPassword = bcrypt.hashSync(randomPassword, 12);
+        passwordInfo = `自动生成随机密码: ${randomPassword}\n请妥善保存此密码！`;
+      }
       
       // 创建管理员用户
       const insertAdmin = db.prepare(
         'INSERT INTO users (email, password_hash) VALUES (?, ?)'
       );
-      const adminResult = insertAdmin.run('admin@localhost', adminPassword);
+      const adminResult = insertAdmin.run(adminEmail, adminPassword);
       
       // 创建管理员档案
       const insertAdminProfile = db.prepare(
@@ -46,7 +62,7 @@ try {
       );
       insertAdminProfile.run(adminResult.lastInsertRowid, '系统管理员', 'admin');
       
-      console.log('✅ 管理员用户创建成功');
+      console.log(`✅ 管理员用户创建成功 (${passwordInfo})`);
     }
   }
 } catch (error) {
@@ -99,6 +115,38 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// 速率限制配置
+// 全局限制：每15分钟最多100个请求（从环境变量读取，默认使用.env.example配置）
+const generalLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15分钟
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 最多100个请求
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: '请求过于频繁，请稍后再试'
+    }
+  },
+  standardHeaders: true, // 返回 RateLimit-* 头
+  legacyHeaders: false, // 禁用 X-RateLimit-* 头
+});
+
+// 认证相关接口更严格的限制：每15分钟最多10个请求
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟
+  max: 10, // 最多10个请求
+  message: {
+    error: {
+      code: 'AUTH_RATE_LIMIT_EXCEEDED',
+      message: '登录尝试过于频繁，请稍后再试'
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// 应用全局速率限制
+app.use(generalLimiter);
+
 // 基础中间件
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -123,8 +171,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// API文档 (Swagger UI)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: '神机阁 API 文档',
+}));
+// 提供JSON格式的Swagger规范
+app.get('/api-docs/swagger.json', (req, res) => {
+  res.json(swaggerSpecs);
+});
+
 // API路由
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes); // 认证接口使用更严格的限制
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/profile', profileRoutes);

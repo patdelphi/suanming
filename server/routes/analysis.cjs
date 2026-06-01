@@ -2,6 +2,7 @@ const express = require('express');
 const { getDB } = require('../database/index.cjs');
 const { authenticate } = require('../middleware/auth.cjs');
 const { AppError, asyncHandler } = require('../middleware/errorHandler.cjs');
+const InputValidator = require('../utils/inputValidator.cjs');
 
 // 导入分析服务
 const BaziAnalyzer = require('../services/baziAnalyzer.cjs');
@@ -21,33 +22,25 @@ const AIEnhancedAnalysis = require('../services/common/AIEnhancedAnalysis.cjs');
 // 初始化AI增强分析服务
 const aiEnhancedAnalysis = new AIEnhancedAnalysis();
 
+// 创建验证器实例
+const validator = new InputValidator();
+
 /**
- * 通用输入验证函数
+ * 使用统一的InputValidator验证出生数据
  * @param {Object} birth_data - 出生数据
  * @throws {AppError} 验证失败时抛出错误
  */
 function validateBirthData(birth_data) {
-  if (!birth_data || typeof birth_data !== 'object') {
-    throw new AppError('缺少必要参数：出生数据', 400, 'MISSING_BIRTH_DATA');
-  }
+  // 验证必填字段
+  validator.validateRequired(birth_data, '出生数据');
+  validator.validateRequired(birth_data.name, '姓名');
+  validator.validateRequired(birth_data.birth_date, '出生日期');
   
-  if (!birth_data.name || typeof birth_data.name !== 'string' || birth_data.name.trim().length === 0) {
-    throw new AppError('缺少必要参数：姓名不能为空', 400, 'MISSING_NAME');
-  }
+  // 验证长度
+  validator.validateLength(birth_data.name, '姓名', 1, 50);
   
-  if (birth_data.name.length > 50) {
-    throw new AppError('姓名长度不能超过50个字符', 400, 'NAME_TOO_LONG');
-  }
-  
-  if (!birth_data.birth_date || typeof birth_data.birth_date !== 'string') {
-    throw new AppError('缺少必要参数：出生日期', 400, 'MISSING_BIRTH_DATE');
-  }
-  
-  // 验证出生日期格式
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(birth_data.birth_date)) {
-    throw new AppError('出生日期格式应为 YYYY-MM-DD', 400, 'INVALID_DATE_FORMAT');
-  }
+  // 验证日期格式
+  validator.validatePattern(birth_data.birth_date, '出生日期', validator.validationRules.date, '出生日期格式应为 YYYY-MM-DD');
   
   // 验证日期有效性
   const birthDate = new Date(birth_data.birth_date);
@@ -64,14 +57,7 @@ function validateBirthData(birth_data) {
   
   // 验证出生时间格式（如果提供）
   if (birth_data.birth_time) {
-    if (typeof birth_data.birth_time !== 'string') {
-      throw new AppError('出生时间格式无效', 400, 'INVALID_TIME_TYPE');
-    }
-    
-    const timeRegex = /^\d{2}:\d{2}$/;
-    if (!timeRegex.test(birth_data.birth_time)) {
-      throw new AppError('出生时间格式应为 HH:MM', 400, 'INVALID_TIME_FORMAT');
-    }
+    validator.validatePattern(birth_data.birth_time, '出生时间', validator.validationRules.time, '出生时间格式应为 HH:MM');
     
     const [hours, minutes] = birth_data.birth_time.split(':').map(Number);
     if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
