@@ -93,6 +93,42 @@ function sendAnalysisResponse(analysisResult, res) {
 }
 
 /**
+ * @swagger
+ * /api/analysis/bazi:
+ *   post:
+ *     summary: 八字命理分析
+ *     tags: [命理分析]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [birth_data]
+ *             properties:
+ *               birth_data:
+ *                 $ref: '#/components/schemas/BirthData'
+ *     responses:
+ *       200:
+ *         description: 分析成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     analysis:
+ *                       type: object
+ *       400:
+ *         description: 参数错误
+ *       500:
+ *         description: 服务器错误
+ */
+/**
  * 八字分析接口
  * 执行八字命理分析，不存储历史记录
  */
@@ -114,6 +150,35 @@ router.post('/bazi', authenticate, asyncHandler(async (req, res) => {
   }
 }));
 
+/**
+ * @swagger
+ * /api/analysis/yijing:
+ *   post:
+ *     summary: 易经占卜分析
+ *     tags: [命理分析]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [question]
+ *             properties:
+ *               question:
+ *                 type: string
+ *                 description: 占卜问题
+ *               divination_method:
+ *                 type: string
+ *                 enum: [time, plum_blossom, coin, number]
+ *                 default: time
+ *     responses:
+ *       200:
+ *         description: 分析成功
+ *       400:
+ *         description: 参数错误
+ */
 /**
  * 易经分析接口
  * 执行易经占卜分析，不存储历史记录
@@ -166,6 +231,30 @@ router.post('/yijing', authenticate, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * @swagger
+ * /api/analysis/ziwei:
+ *   post:
+ *     summary: 紫微斗数分析
+ *     tags: [命理分析]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [birth_data]
+ *             properties:
+ *               birth_data:
+ *                 $ref: '#/components/schemas/BirthData'
+ *     responses:
+ *       200:
+ *         description: 分析成功
+ *       400:
+ *         description: 参数错误（缺少性别等）
+ */
+/**
  * 紫微斗数分析接口
  * 执行紫微斗数分析，不存储历史记录
  */
@@ -192,6 +281,35 @@ router.post('/ziwei', authenticate, asyncHandler(async (req, res) => {
   }
 }));
 
+/**
+ * @swagger
+ * /api/analysis/save-history:
+ *   post:
+ *     summary: 保存分析历史记录
+ *     tags: [命理分析]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [analysis_type, analysis_data]
+ *             properties:
+ *               analysis_type:
+ *                 type: string
+ *                 enum: [bazi, ziwei, yijing, qimen]
+ *               analysis_data:
+ *                 type: object
+ *               input_data:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: 保存成功
+ *       400:
+ *         description: 参数错误
+ */
 // 历史记录存储接口
 router.post('/save-history', authenticate, asyncHandler(async (req, res) => {
   const { analysis_type, analysis_data, input_data } = req.body;
@@ -345,6 +463,16 @@ router.post('/comprehensive', authenticate, asyncHandler(async (req, res) => {
   }
 }));
 
+/**
+ * @swagger
+ * /api/analysis/types:
+ *   get:
+ *     summary: 获取可用分析类型列表
+ *     tags: [命理分析]
+ *     responses:
+ *       200:
+ *         description: 成功返回分析类型列表
+ */
 // 获取分析类型列表
 router.get('/types', (req, res) => {
   res.json({

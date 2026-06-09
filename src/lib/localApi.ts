@@ -1,35 +1,23 @@
 // 本地API客户端
 // 替代Supabase客户端，提供相同的接口
 
+import type {
+  ApiResponse, User, AuthResponse,
+  BirthData, ProfileUpdateData, UserProfile,
+  BaziAnalysisResult, ZiweiAnalysisResult, YijingAnalysisResult, QimenAnalysisResult,
+  ComprehensiveAnalysisResult, AnalysisTypeInfo,
+  NumerologyReading, HistoryStats, HistoryQueryParams,
+  AIInterpretation, SaveHistoryResponse
+} from '@/types';
+
 // 强制在开发环境使用正确的后端地址
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
   (import.meta.env.DEV ? 'http://localhost:3001/api' : 
    (window.location.hostname.includes('koyeb.app') ? `${window.location.origin}/api` : `${window.location.origin}/api`));
 
-// 调试信息
-
-
-interface ApiResponse<T> {
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-  };
-}
-
-interface User {
-  id: number;
-  email: string;
-}
-
-interface AuthResponse {
-  user: User;
-  token: string;
-}
-
 class LocalApiClient {
   private token: string | null = null;
-  private pendingRequests: Map<string, Promise<any>> = new Map();
+  private pendingRequests: Map<string, Promise<ApiResponse<unknown>>> = new Map();
 
   constructor() {
     // 从localStorage恢复token
@@ -187,13 +175,13 @@ class LocalApiClient {
   // 用户档案相关方法
   profiles = {
     // 获取用户档案
-    get: async (): Promise<ApiResponse<{ profile: any }>> => {
-      return this.request<{ profile: any }>('/profile');
+    get: async (): Promise<ApiResponse<{ profile: UserProfile }>> => {
+      return this.request<{ profile: UserProfile }>('/profile');
     },
 
     // 更新用户档案
-    update: async (profileData: any): Promise<ApiResponse<{ profile: any }>> => {
-      return this.request<{ profile: any }>('/profile', {
+    update: async (profileData: ProfileUpdateData): Promise<ApiResponse<{ profile: UserProfile }>> => {
+      return this.request<{ profile: UserProfile }>('/profile', {
         method: 'PUT',
         body: JSON.stringify(profileData),
       });
@@ -209,7 +197,7 @@ class LocalApiClient {
   };
 
   // 生成请求唯一键
-  private generateRequestKey(endpoint: string, data: any): string {
+  private generateRequestKey(endpoint: string, data: unknown): string {
     return `${endpoint}:${JSON.stringify(data)}`;
   }
 
@@ -217,13 +205,13 @@ class LocalApiClient {
   private async requestWithDeduplication<T>(
     endpoint: string,
     options: RequestInit,
-    data: any
+    data: unknown
   ): Promise<ApiResponse<T>> {
     const requestKey = this.generateRequestKey(endpoint, data);
     
     // 如果已有相同请求在进行中，返回该请求的Promise
     if (this.pendingRequests.has(requestKey)) {
-      return this.pendingRequests.get(requestKey);
+      return this.pendingRequests.get(requestKey) as Promise<ApiResponse<T>>;
     }
     
     // 创建新请求
@@ -241,52 +229,52 @@ class LocalApiClient {
   // 分析相关方法
   analysis = {
     // 八字分析
-    bazi: async (birthData: any): Promise<ApiResponse<{ record_id: number; analysis: any }>> => {
-      return this.requestWithDeduplication<{ record_id: number; analysis: any }>('/analysis/bazi', {
+    bazi: async (birthData: BirthData): Promise<ApiResponse<{ analysis: BaziAnalysisResult }>> => {
+      return this.requestWithDeduplication<{ analysis: BaziAnalysisResult }>('/analysis/bazi', {
         method: 'POST',
         body: JSON.stringify({ birth_data: birthData }),
       }, birthData);
     },
 
     // 紫微斗数分析
-    ziwei: async (birthData: any): Promise<ApiResponse<{ record_id: number; analysis: any }>> => {
-      return this.requestWithDeduplication<{ record_id: number; analysis: any }>('/analysis/ziwei', {
+    ziwei: async (birthData: BirthData): Promise<ApiResponse<{ analysis: ZiweiAnalysisResult }>> => {
+      return this.requestWithDeduplication<{ analysis: ZiweiAnalysisResult }>('/analysis/ziwei', {
         method: 'POST',
         body: JSON.stringify({ birth_data: birthData }),
       }, birthData);
     },
 
     // 易经分析
-    yijing: async (yijingData: any): Promise<ApiResponse<{ record_id: number; analysis: any }>> => {
-      return this.requestWithDeduplication<{ record_id: number; analysis: any }>('/analysis/yijing', {
+    yijing: async (yijingData: BirthData): Promise<ApiResponse<{ analysis: YijingAnalysisResult }>> => {
+      return this.requestWithDeduplication<{ analysis: YijingAnalysisResult }>('/analysis/yijing', {
         method: 'POST',
         body: JSON.stringify(yijingData),
       }, yijingData);
     },
 
     // 奇门遁甲分析
-    qimen: async (qimenData: any): Promise<ApiResponse<{ record_id: number; analysis: any }>> => {
-      return this.requestWithDeduplication<{ record_id: number; analysis: any }>('/qimen/analyze', {
+    qimen: async (qimenData: BirthData): Promise<ApiResponse<{ analysis: QimenAnalysisResult }>> => {
+      return this.requestWithDeduplication<{ analysis: QimenAnalysisResult }>('/qimen/analyze', {
         method: 'POST',
         body: JSON.stringify(qimenData),
       }, qimenData);
     },
 
     // 综合分析
-    comprehensive: async (birthData: any, includeTypes?: string[]): Promise<ApiResponse<{ record_id: number; analysis: any }>> => {
-      return this.request<{ record_id: number; analysis: any }>('/analysis/comprehensive', {
+    comprehensive: async (birthData: BirthData, includeTypes?: string[]): Promise<ApiResponse<{ record_id: number; analysis: ComprehensiveAnalysisResult }>> => {
+      return this.request<{ record_id: number; analysis: ComprehensiveAnalysisResult }>('/analysis/comprehensive', {
         method: 'POST',
         body: JSON.stringify({ birth_data: birthData, include_types: includeTypes }),
       });
     },
 
     // 获取分析类型
-    getTypes: async (): Promise<ApiResponse<{ available_types: any[] }>> => {
-      return this.request<{ available_types: any[] }>('/analysis/types');
+    getTypes: async (): Promise<ApiResponse<{ available_types: AnalysisTypeInfo[] }>> => {
+      return this.request<{ available_types: AnalysisTypeInfo[] }>('/analysis/types');
     },
 
     // 验证分析数据
-    validate: async (birthData: any, analysisType: string): Promise<ApiResponse<{ valid: boolean; errors: string[] }>> => {
+    validate: async (birthData: BirthData, analysisType: string): Promise<ApiResponse<{ valid: boolean; errors: string[] }>> => {
       return this.request<{ valid: boolean; errors: string[] }>('/analysis/validate', {
         method: 'POST',
         body: JSON.stringify({ birth_data: birthData, analysis_type: analysisType }),
@@ -294,8 +282,8 @@ class LocalApiClient {
     },
 
     // 保存历史记录
-    saveHistory: async (analysisType: string, analysisData: any, inputData?: any): Promise<ApiResponse<{ record_id: number; message: string }>> => {
-      return this.request<{ record_id: number; message: string }>('/analysis/save-history', {
+    saveHistory: async (analysisType: string, analysisData: Record<string, unknown>, inputData?: Record<string, unknown>): Promise<ApiResponse<SaveHistoryResponse>> => {
+      return this.request<SaveHistoryResponse>('/analysis/save-history', {
         method: 'POST',
         body: JSON.stringify({ 
           analysis_type: analysisType, 
@@ -309,7 +297,7 @@ class LocalApiClient {
   // 历史记录相关方法
   history = {
     // 获取历史记录
-    getAll: async (params?: { page?: number; limit?: number; reading_type?: string }): Promise<ApiResponse<any[]>> => {
+    getAll: async (params?: HistoryQueryParams): Promise<ApiResponse<NumerologyReading[]>> => {
       const searchParams = new URLSearchParams();
       if (params?.page) searchParams.set('page', params.page.toString());
       if (params?.limit) searchParams.set('limit', params.limit.toString());
@@ -318,12 +306,12 @@ class LocalApiClient {
       const queryString = searchParams.toString();
       const endpoint = queryString ? `/history?${queryString}` : '/history';
 
-      return this.request<any[]>(endpoint);
+      return this.request<NumerologyReading[]>(endpoint);
     },
 
     // 获取单个记录
-    getById: async (id: string): Promise<ApiResponse<any>> => {
-      return this.request<any>(`/history/${id}`);
+    getById: async (id: string): Promise<ApiResponse<NumerologyReading>> => {
+      return this.request<NumerologyReading>(`/history/${id}`);
     },
 
     // 删除记录
@@ -342,12 +330,12 @@ class LocalApiClient {
     },
 
     // 获取统计信息
-    getStats: async (): Promise<ApiResponse<any>> => {
-      return this.request<any>('/history/stats/summary');
+    getStats: async (): Promise<ApiResponse<HistoryStats>> => {
+      return this.request<HistoryStats>('/history/stats/summary');
     },
 
     // 搜索记录
-    search: async (query: string, params?: { page?: number; limit?: number }): Promise<ApiResponse<any[]>> => {
+    search: async (query: string, params?: { page?: number; limit?: number }): Promise<ApiResponse<NumerologyReading[]>> => {
       const searchParams = new URLSearchParams();
       if (params?.page) searchParams.set('page', params.page.toString());
       if (params?.limit) searchParams.set('limit', params.limit.toString());
@@ -355,20 +343,20 @@ class LocalApiClient {
       const queryString = searchParams.toString();
       const endpoint = queryString ? `/history/search/${encodeURIComponent(query)}?${queryString}` : `/history/search/${encodeURIComponent(query)}`;
 
-      return this.request<any[]>(endpoint);
+      return this.request<NumerologyReading[]>(endpoint);
     },
   };
 
   // AI解读相关方法
   aiInterpretation = {
     // 获取AI解读结果
-    get: async (readingId: number): Promise<ApiResponse<any>> => {
-      return this.request(`/ai-interpretation/get/${readingId}`);
+    get: async (readingId: number): Promise<ApiResponse<AIInterpretation>> => {
+      return this.request<AIInterpretation>(`/ai-interpretation/get/${readingId}`);
     },
 
     // 保存AI解读结果
-    save: async (readingId: number, content: string, model?: string, tokensUsed?: number): Promise<ApiResponse<any>> => {
-      return this.request<any>('/ai-interpretation/save', {
+    save: async (readingId: number, content: string, model?: string, tokensUsed?: number): Promise<ApiResponse<AIInterpretation>> => {
+      return this.request<AIInterpretation>('/ai-interpretation/save', {
         method: 'POST',
         body: JSON.stringify({
           reading_id: readingId,
@@ -381,20 +369,20 @@ class LocalApiClient {
     },
 
     // 获取AI解读列表
-    list: async (params?: { page?: number; limit?: number; reading_type?: string }): Promise<ApiResponse<any[]>> => {
+    list: async (params?: { page?: number; limit?: number; reading_type?: string }): Promise<ApiResponse<AIInterpretation[]>> => {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.reading_type) queryParams.append('reading_type', params.reading_type);
       
       const endpoint = `/ai-interpretation/list${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      return this.request<any[]>(endpoint);
+      return this.request<AIInterpretation[]>(endpoint);
     }
   };
 
   // 兼容Supabase的functions.invoke方法
   functions = {
-    invoke: async (functionName: string, options: { body: any }): Promise<ApiResponse<any>> => {
+    invoke: async (functionName: string, options: { body: Record<string, unknown> }): Promise<ApiResponse<unknown>> => {
       // 将Supabase Edge Function调用映射到本地API
       const functionMap: Record<string, string> = {
         'bazi-analyzer': '/analysis/bazi',
@@ -408,19 +396,19 @@ class LocalApiClient {
       const endpoint = functionMap[functionName.replace(/\?.*$/, '')] || `/functions/${functionName}`;
       
       if (functionName.includes('reading-history')) {
-        const { action, ...params } = options.body;
+        const { action, ...params } = options.body as { action: string; reading_id?: string };
         
         switch (action) {
           case 'get_history':
             return this.history.getAll();
           case 'delete_reading':
-            return this.history.delete(params.reading_id);
+            return this.history.delete(params.reading_id!);
           default:
             return { error: { code: 'UNKNOWN_ACTION', message: `Unknown action: ${action}` } };
         }
       }
 
-      return this.request<any>(endpoint, {
+      return this.request<unknown>(endpoint, {
         method: 'POST',
         body: JSON.stringify(options.body),
       });

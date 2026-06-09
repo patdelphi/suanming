@@ -124,6 +124,31 @@ router.post('/register', asyncHandler(async (req, res) => {
   });
 }));
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: 用户登录
+ *     tags: [认证]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 登录成功
+ *       401:
+ *         description: 认证失败
+ */
 // 用户登录
 router.post('/login', asyncHandler(async (req, res) => {
   const { email, password } = req.body;
