@@ -82,8 +82,9 @@ const WuxingAnalysisPage: React.FC = () => {
         throw new Error(response.error.message);
       }
 
-      if (response.data?.data) {
-        setAnalysisData(response.data.data);
+      const data = response.data as { data?: WuxingData } | undefined;
+      if (data?.data) {
+        setAnalysisData(data.data);
         toast.success('五行分析完成！');
       } else {
         throw new Error('分析结果为空');

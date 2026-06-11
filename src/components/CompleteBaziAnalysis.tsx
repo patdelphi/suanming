@@ -7,6 +7,7 @@ import DownloadButton from './ui/DownloadButton';
 import AIInterpretationButton from './ui/AIInterpretationButton';
 import AIConfigModal from './ui/AIConfigModal';
 import { localApi } from '../lib/localApi';
+import type { Gender } from '../types';
 
 /**
  * 八字分析组件的Props接口
@@ -165,7 +166,7 @@ const CompleteBaziAnalysis: React.FC<CompleteBaziAnalysisProps> = ({ birthDate, 
         name: birthDate.name || '用户',
         birth_date: birthDate.date,
         birth_time: birthDate.time,
-        gender: birthDate.gender || 'male'
+        gender: (birthDate.gender || 'male') as Gender
       };
 
       const baziResponse = await localApi.analysis.bazi(birthData);

@@ -3,7 +3,7 @@
 
 import type {
   ApiResponse, User, AuthResponse,
-  BirthData, ProfileUpdateData, UserProfile,
+  BirthData, YijingData, ProfileUpdateData, UserProfile,
   BaziAnalysisResult, ZiweiAnalysisResult, YijingAnalysisResult, QimenAnalysisResult,
   ComprehensiveAnalysisResult, AnalysisTypeInfo,
   NumerologyReading, HistoryStats, HistoryQueryParams,
@@ -244,7 +244,7 @@ class LocalApiClient {
     },
 
     // 易经分析
-    yijing: async (yijingData: BirthData): Promise<ApiResponse<{ analysis: YijingAnalysisResult }>> => {
+    yijing: async (yijingData: YijingData): Promise<ApiResponse<{ analysis: YijingAnalysisResult }>> => {
       return this.requestWithDeduplication<{ analysis: YijingAnalysisResult }>('/analysis/yijing', {
         method: 'POST',
         body: JSON.stringify(yijingData),

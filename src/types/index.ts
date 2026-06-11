@@ -33,6 +33,15 @@ export interface BirthData {
   question?: string; // 易经占卜用
 }
 
+/** 易经占卜数据 */
+export interface YijingData {
+  question: string;
+  user_id: number | string;
+  divination_method: string;
+  user_timezone?: string;
+  local_time?: string;
+}
+
 /** 前端出生日期选择器格式 */
 export interface BirthDateInput {
   date: string; // YYYY-MM-DD

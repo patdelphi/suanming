@@ -18,6 +18,7 @@ import DownloadButton from './ui/DownloadButton';
 import AIInterpretationButton from './ui/AIInterpretationButton';
 import AIConfigModal from './ui/AIConfigModal';
 import { localApi } from '../lib/localApi';
+import type { Gender } from '../types';
 import { wuxingJuColors } from './ziwei/shared';
 
 // 导入拆分的子组件
@@ -62,7 +63,7 @@ const CompleteZiweiAnalysis: React.FC<CompleteZiweiAnalysisProps> = ({ birthDate
           name: birthDate.name || '用户',
           birth_date: birthDate.date,
           birth_time: birthDate.time,
-          gender: birthDate.gender || 'male'
+          gender: (birthDate.gender || 'male') as Gender
         };
 
         const ziweiResponse = await localApi.analysis.ziwei(birthData);
