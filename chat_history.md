@@ -63,3 +63,42 @@
 
 ### 待审阅
 - 用户确认后按计划执行修复
+
+---
+
+## 2026-06-11 16:31:43
+
+### Fix yijingAnalyzer.cjs issues
+
+#### Issue 1: 震卦和艮卦 binary 表示 (ANALYZED - NO CHANGE NEEDED)
+
+After thorough analysis of the binary convention in the file:
+- getChangingHexagram uses index = 6 - linePos → binary[0]=line6(top), binary[5]=line1(bottom)
+- Hexagram binary format: upper_trigram + lower_trigram (top-to-bottom)
+- Verified with hex 3 (屯): binary='010001' = 坎('010') + 震('001') ✓
+
+Current values are CORRECT:
+- 震 = '001' (top→bottom: Yin,Yin,Yang = ☳) ✓
+- 艮 = '100' (top→bottom: Yang,Yin,Yin = ☶) ✓
+
+The reference YijingCalculator.cjs has them swapped (bug in reference).
+
+#### Issue 2: 互卦计算爻位取错 (FIXED)
+
+Fixed getInterHexagram substring indices:
+- Was: substring(3,6) for lower, substring(2,5) for upper (wrong)
+- Now: substring(2,5) for lower (二三四爻), substring(1,4) for upper (三四五爻)
+
+#### Issue 3: 梅花易数时间起卦用公历年份 (FIXED)
+
+Replaced raw year with Earthly Branch number: zhiNumber = ((year - 4) % 12) + 1
+
+#### Issue 4: Math.random() (NOT FOUND)
+
+No Math.random() occurrences in yijingAnalyzer.cjs. Already clean.
+
+### 修改的文件
+- server/services/yijingAnalyzer.cjs: 修复互卦计算索引、时间起卦年份转换
+
+### 注意事项
+- 震/艮的binary值在当前文件中是正确的，参考文件YijingCalculator.cjs反而有bug
