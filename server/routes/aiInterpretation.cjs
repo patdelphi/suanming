@@ -1,10 +1,11 @@
 const express = require('express');
 const { authenticate } = require('../middleware/auth.cjs');
 const { getDB } = require('../database/index.cjs');
+const { asyncHandler } = require('../middleware/errorHandler.cjs');
 const router = express.Router();
 
 // 保存AI解读结果
-router.post('/save', authenticate, async (req, res) => {
+router.post('/save', authenticate, asyncHandler(async (req, res) => {
   try {
     const { reading_id, content, model, tokens_used, success, error_message } = req.body;
     const user_id = req.user.id;
@@ -71,7 +72,7 @@ router.post('/save', authenticate, async (req, res) => {
 });
 
 // 获取AI解读结果
-router.get('/get/:reading_id', authenticate, async (req, res) => {
+router.get('/get/:reading_id', authenticate, asyncHandler(async (req, res) => {
   try {
     const { reading_id } = req.params;
     const user_id = req.user.id;
@@ -120,10 +121,12 @@ router.get('/get/:reading_id', authenticate, async (req, res) => {
 });
 
 // 获取用户的所有AI解读记录
-router.get('/list', authenticate, async (req, res) => {
+router.get('/list', authenticate, asyncHandler(async (req, res) => {
   try {
     const user_id = req.user.id;
-    const { page = 1, limit = 20, reading_type } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const { reading_type } = req.query;
     const offset = (page - 1) * limit;
     const db = getDB();
 
@@ -187,7 +190,7 @@ router.get('/list', authenticate, async (req, res) => {
 });
 
 // 删除AI解读结果
-router.delete('/delete/:reading_id', authenticate, async (req, res) => {
+router.delete('/delete/:reading_id', authenticate, asyncHandler(async (req, res) => {
   try {
     const { reading_id } = req.params;
     const user_id = req.user.id;

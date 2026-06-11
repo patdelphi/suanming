@@ -432,7 +432,7 @@ router.post('/comprehensive', authenticate, asyncHandler(async (req, res) => {
     `);
     
     const comprehensiveResult = {
-      analysis_type: 'comprehensive',
+      analysis_type: 'bazi',
       analysis_date: new Date().toISOString().split('T')[0],
       included_types: analysisTypes,
       results: results
@@ -440,7 +440,7 @@ router.post('/comprehensive', authenticate, asyncHandler(async (req, res) => {
     
     const result = insertReading.run(
       req.user.id,
-      'comprehensive',
+      'bazi',
       birth_data.name,
       birth_data.birth_date,
       birth_data.birth_time || null,
@@ -526,7 +526,7 @@ router.post('/bazi-details', authenticate, asyncHandler(async (req, res) => {
       name: '详细分析',
       birth_date: birthDate,
       birth_time: birthTime || '12:00',
-      gender: 'male'
+      gender: req.body.gender || 'male'
     };
     
     // 执行八字分析
@@ -558,7 +558,7 @@ router.post('/bazi-wuxing', authenticate, asyncHandler(async (req, res) => {
       name: '五行分析',
       birth_date: birthDate,
       birth_time: birthTime || '12:00',
-      gender: 'male'
+      gender: req.body.gender || 'male'
     };
     
     // 执行八字分析，提取五行部分
@@ -647,7 +647,7 @@ router.post('/ai-recommendations', authenticate, asyncHandler(async (req, res) =
   // 获取用户历史分析数据
   const analysisHistory = db.prepare(`
     SELECT reading_type, analysis, created_at
-    FROM readings 
+    FROM numerology_readings 
     WHERE user_id = ?
     ORDER BY created_at DESC
     LIMIT 20
@@ -700,7 +700,7 @@ router.post('/ai-optimize-accuracy', authenticate, asyncHandler(async (req, res)
   // 获取历史反馈数据
   const historicalFeedback = db.prepare(`
     SELECT analysis, created_at
-    FROM readings 
+    FROM numerology_readings 
     WHERE user_id = ?
     ORDER BY created_at DESC
     LIMIT 10
@@ -778,7 +778,7 @@ router.get('/ai-stats', authenticate, asyncHandler(async (req, res) => {
       reading_type,
       COUNT(*) as count,
       AVG(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as success_rate
-    FROM readings 
+    FROM numerology_readings 
     WHERE user_id = ?
     GROUP BY reading_type
   `).all(req.user.id);
@@ -786,7 +786,7 @@ router.get('/ai-stats', authenticate, asyncHandler(async (req, res) => {
   // 获取用户行为模式
   const analysisHistory = db.prepare(`
     SELECT reading_type, created_at
-    FROM readings 
+    FROM numerology_readings 
     WHERE user_id = ?
     ORDER BY created_at DESC
     LIMIT 50

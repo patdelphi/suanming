@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticate } = require('../middleware/auth.cjs');
 const { dbManager } = require('../database/index.cjs');
+const { asyncHandler } = require('../middleware/errorHandler.cjs');
 
 const { generateMarkdown } = require('../services/generators/markdownGenerator.cjs');
 const { generatePDF } = require('../services/generators/pdfGenerator.cjs');
@@ -12,7 +13,7 @@ const router = express.Router();
  * POST /api/download
  * 支持格式：markdown, pdf, png
  */
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, asyncHandler(async (req, res) => {
   try {
     const { analysisData, analysisType, format, userName } = req.body;
     const userId = req.user.id;
@@ -143,12 +144,13 @@ router.post('/', authenticate, async (req, res) => {
  * 获取用户下载历史
  * GET /api/download/history
  */
-router.get('/history', authenticate, async (req, res) => {
+router.get('/history', authenticate, asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 20 } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
     
-    const db = dbManager.getDb();
+    const db = dbManager.getDatabase();
     
     // 获取总数
     const countStmt = db.prepare('SELECT COUNT(*) as total FROM download_history WHERE user_id = ?');

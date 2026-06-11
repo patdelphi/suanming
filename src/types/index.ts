@@ -329,23 +329,6 @@ export interface NumerologyReading {
   updated_at: string;
 }
 
-/** 历史分析记录（与AnalysisRecord等价） */
-export interface AnalysisRecord {
-  id: number;
-  user_id: number;
-  analysis_type: AnalysisType;
-  name: string;
-  birth_date: string;
-  birth_time?: string;
-  birth_place?: string;
-  gender: string;
-  input_data: Record<string, unknown>;
-  analysis_results: Record<string, unknown>;
-  status: AnalysisStatus;
-  created_at: string;
-  updated_at: string;
-}
-
 /** 历史记录查询参数 */
 export interface HistoryQueryParams {
   page?: number;

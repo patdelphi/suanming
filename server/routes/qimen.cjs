@@ -4,7 +4,11 @@
 const express = require('express');
 const QimenAnalyzer = require('../services/qimenAnalyzer.cjs');
 const inputValidator = require('../utils/inputValidator.cjs');
-const logger = require('../middleware/logger.cjs');
+const logger = {
+  info: (...args) => console.log('[QIMEN]', ...args),
+  error: (...args) => console.error('[QIMEN ERROR]', ...args),
+  warn: (...args) => console.warn('[QIMEN WARN]', ...args)
+};
 
 const router = express.Router();
 const qimenAnalyzer = new QimenAnalyzer();
@@ -17,10 +21,10 @@ const { AppError, asyncHandler } = require('../middleware/errorHandler.cjs');
  * @desc 奇门遁甲完整分析
  * @access Private
  */
-router.post('/analyze', asyncHandler(async (req, res) => {
+router.post('/analyze', authenticate, asyncHandler(async (req, res) => {
   try {
-    const { question, birth_date, birth_time, user_timezone, local_time, user_id } = req.body;
-    const userId = user_id || 1; // 测试用户ID
+    const { question, birth_date, birth_time, user_timezone, local_time } = req.body;
+    const userId = req.user.id;
     
     // 输入验证
     if (!question || typeof question !== 'string' || question.trim().length === 0) {
@@ -172,77 +176,6 @@ router.post('/calculate', async (req, res) => {
       error: {
         code: 'CALCULATION_ERROR',
         message: '奇门盘计算失败',
-        details: error.message
-      }
-    });
-  }
-});
-
-/**
- * @route POST /api/qimen/analyze
- * @desc 奇门遁甲格局分析
- * @access Public
- */
-router.post('/analyze', async (req, res) => {
-  try {
-    const { qimenPan, analysisOptions = {} } = req.body;
-    
-    // 输入验证
-    if (!qimenPan || !qimenPan.dipan || !qimenPan.tianpan) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_INPUT',
-          message: '缺少奇门盘数据',
-          details: '需要提供完整的奇门盘信息'
-        }
-      });
-    }
-    
-    // 格局分析
-    const patterns = qimenAnalyzer.patternAnalyzer.analyzePatterns(qimenPan);
-    
-    // 构建响应数据
-    const response = {
-      success: true,
-      data: {
-        patterns: patterns.map(pattern => ({
-          name: pattern.name,
-          type: pattern.type,
-          level: pattern.level,
-          score: pattern.score,
-          palace: pattern.palace,
-          description: pattern.description
-        })),
-        summary: {
-          totalPatterns: patterns.length,
-          favorablePatterns: patterns.filter(p => ['吉', '大吉'].includes(p.level)).length,
-          unfavorablePatterns: patterns.filter(p => ['凶', '大凶'].includes(p.level)).length,
-          neutralPatterns: patterns.filter(p => ['中', '平'].includes(p.level)).length
-        },
-        analysisOptions: {
-          includePatterns: analysisOptions.includePatterns !== false,
-          includeYongshen: analysisOptions.includeYongshen !== false,
-          detailLevel: analysisOptions.detailLevel || 'standard'
-        }
-      }
-    };
-    
-    logger.info('奇门格局分析成功', {
-      patternsCount: patterns.length,
-      detailLevel: analysisOptions.detailLevel
-    });
-    
-    res.json(response);
-    
-  } catch (error) {
-    logger.error('奇门格局分析失败', error);
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'ANALYSIS_ERROR',
-        message: '格局分析失败',
         details: error.message
       }
     });

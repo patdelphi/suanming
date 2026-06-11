@@ -363,12 +363,11 @@ process.on('exit', () => {
   dbManager.close();
 });
 
-process.on('SIGINT', () => {
-  dbManager.close();
-  process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-  dbManager.close();
-  process.exit(0);
-});
+// 定期清理过期会话（每小时执行一次）
+setInterval(() => {
+  try {
+    dbManager.cleanupExpiredSessions();
+  } catch (error) {
+    console.error('定期清理过期会话失败:', error);
+  }
+}, 60 * 60 * 1000);

@@ -20,7 +20,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
   let whereClause = 'WHERE user_id = ?';
   let params = [req.user.id];
   
-  if (reading_type && ['bazi', 'ziwei', 'yijing', 'wuxing'].includes(reading_type)) {
+  if (reading_type && ['bazi', 'ziwei', 'yijing', 'wuxing', 'qimen'].includes(reading_type)) {
     whereClause += ' AND reading_type = ?';
     params.push(reading_type);
   }
@@ -110,6 +110,12 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 // 获取单个分析记录
 router.get('/:id', authenticate, asyncHandler(async (req, res) => {
   const { id } = req.params;
+  
+  // 排除保留路径，让其他路由处理
+  if (['stats', 'search'].includes(id)) {
+    return res.status(404).json({ error: '路由不存在' });
+  }
+  
   const db = getDB();
   
   const reading = db.prepare(`
@@ -377,13 +383,13 @@ router.post('/compare', authenticate, asyncHandler(async (req, res) => {
   // 获取两个分析记录
   const currentAnalysis = db.prepare(`
     SELECT analysis, created_at as analysis_date
-    FROM readings 
+    FROM numerology_readings 
     WHERE id = ? AND user_id = ?
   `).get(current_analysis_id, req.user.id);
   
   const historicalAnalysis = db.prepare(`
     SELECT analysis, created_at as analysis_date
-    FROM readings 
+    FROM numerology_readings 
     WHERE id = ? AND user_id = ?
   `).get(historical_analysis_id, req.user.id);
   
@@ -428,7 +434,7 @@ router.post('/batch-compare', authenticate, asyncHandler(async (req, res) => {
   // 获取用户最近的分析记录
   const analysisHistory = db.prepare(`
     SELECT analysis, created_at as analysis_date
-    FROM readings 
+    FROM numerology_readings 
     WHERE user_id = ? AND reading_type = ?
     ORDER BY created_at DESC
     LIMIT ?
@@ -470,7 +476,7 @@ router.get('/trends/:analysis_type', authenticate, asyncHandler(async (req, res)
     SELECT 
       DATE(created_at) as analysis_date,
       COUNT(*) as count
-    FROM readings 
+    FROM numerology_readings 
     WHERE user_id = ? 
       AND reading_type = ?
       AND created_at >= datetime('now', '-' || ? || ' days')
@@ -485,7 +491,7 @@ router.get('/trends/:analysis_type', authenticate, asyncHandler(async (req, res)
   // 获取最近的分析记录用于趋势分析
   const recentAnalyses = db.prepare(`
     SELECT analysis, created_at
-    FROM readings 
+    FROM numerology_readings 
     WHERE user_id = ? AND reading_type = ?
     ORDER BY created_at DESC
     LIMIT 5

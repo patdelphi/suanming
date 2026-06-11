@@ -138,22 +138,6 @@ const hashToken = (token) => {
   return crypto.createHash('sha256').update(token).digest('hex');
 };
 
-// 清理过期会话
-const cleanupExpiredSessions = () => {
-  const db = getDB();
-  const stmt = db.prepare('DELETE FROM user_sessions WHERE expires_at < ?');
-  const result = stmt.run(new Date().toISOString());
-  
-  if (result.changes > 0) {
-    console.log(`清理了 ${result.changes} 个过期会话`);
-  }
-  
-  return result.changes;
-};
-
-// 定期清理过期会话（每小时执行一次）
-setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
-
 module.exports = {
   generateToken,
   verifyToken,
@@ -162,7 +146,6 @@ module.exports = {
   createSession,
   deleteSession,
   deleteAllSessions,
-  cleanupExpiredSessions,
   JWT_SECRET,
   JWT_EXPIRES_IN
 };

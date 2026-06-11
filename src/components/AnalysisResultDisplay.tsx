@@ -3,7 +3,6 @@ import CompleteBaziAnalysis from './CompleteBaziAnalysis';
 import CompleteZiweiAnalysis from './CompleteZiweiAnalysis';
 import CompleteYijingAnalysis from './CompleteYijingAnalysis';
 import CompleteQimenAnalysis from './CompleteQimenAnalysis';
-import BaziAnalysisDisplay from './BaziAnalysisDisplay';
 
 interface AnalysisResultDisplayProps {
   analysisResult?: any;

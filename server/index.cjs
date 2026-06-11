@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const bcrypt = require('bcryptjs');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger.cjs');
 const path = require('path');
@@ -157,6 +158,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
     database: 'connected'
   });
 });

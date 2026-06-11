@@ -43,9 +43,6 @@ tests/
 # Development tools config
 .eslintrc*
 .prettierrc*
-tailwind.config.js
-vite.config.ts
-tsconfig*.json
 postcss.config.js
 eslint.config.js
 
