@@ -21,20 +21,25 @@ class BaziAnalyzer {
       defaultTTL: 1800000 // 30分钟
     });
     
-    // 十神关系表
-    this.tenGods = {
-      '比肩': { same: true, description: '同我者为比肩' },
-      '劫财': { same: true, description: '同我者为劫财' },
-      '食神': { generate: true, description: '我生者为食神' },
-      '伤官': { generate: true, description: '我生者为伤官' },
-      '正财': { overcome: true, description: '我克者为正财' },
-      '偏财': { overcome: true, description: '我克者为偏财' },
-      '正官': { beOvercome: true, description: '克我者为正官' },
-      '七杀': { beOvercome: true, description: '克我者为七杀' },
-      '正印': { beGenerate: true, description: '生我者为正印' },
-      '偏印': { beGenerate: true, description: '生我者为偏印' }
+    // 纳音五行对照表（60甲子纳音）
+    this.nayinTable = {
+      '甲子': '海中金', '乙丑': '海中金', '丙寅': '炉中火', '丁卯': '炉中火',
+      '戊辰': '大林木', '己巳': '大林木', '庚午': '路旁土', '辛未': '路旁土',
+      '壬申': '剑锋金', '癸酉': '剑锋金', '甲戌': '山头火', '乙亥': '山头火',
+      '丙子': '涧下水', '丁丑': '涧下水', '戊寅': '城头土', '己卯': '城头土',
+      '庚辰': '白蜡金', '辛巳': '白蜡金', '壬午': '杨柳木', '癸未': '杨柳木',
+      '甲申': '泉中水', '乙酉': '泉中水', '丙戌': '屋上土', '丁亥': '屋上土',
+      '戊子': '霹雳火', '己丑': '霹雳火', '庚寅': '松柏木', '辛卯': '松柏木',
+      '壬辰': '长流水', '癸巳': '长流水', '甲午': '砂中金', '乙未': '砂中金',
+      '丙申': '山下火', '丁酉': '山下火', '戊戌': '平地木', '己亥': '平地木',
+      '庚子': '壁上土', '辛丑': '壁上土', '壬寅': '金箔金', '癸卯': '金箔金',
+      '甲辰': '覆灯火', '乙巳': '覆灯火', '丙午': '天河水', '丁未': '天河水',
+      '戊申': '大驿土', '己酉': '大驿土', '庚戌': '钗钏金', '辛亥': '钗钏金',
+      '壬子': '桑柘木', '癸丑': '桑柘木', '甲寅': '大溪水', '乙卯': '大溪水',
+      '丙辰': '沙中土', '丁巳': '沙中土', '戊午': '天上火', '己未': '天上火',
+      '庚申': '石榴木', '辛酉': '石榴木', '壬戌': '大海水', '癸亥': '大海水'
     };
-    
+
     // 二十四节气表（简化版）
     this.solarTerms = {
       1: { start: 4, name: '立春' }, // 2月4日左右立春
@@ -136,25 +141,16 @@ class BaziAnalyzer {
       // 1. 精确计算八字四柱（基础计算，必须先完成）
       const baziChart = this.calculatePreciseBazi(birth_date, birth_time);
       
-      // 2-6. 并行异步计算各项分析（提升性能）
-      const [wuxingAnalysis, patternAnalysis, fortuneAnalysis, lifeGuidance, modernGuidance] = await Promise.all([
-        // 详细五行分析
-        Promise.resolve(this.performDetailedWuxingAnalysis(baziChart, gender, personalizedName)),
-        // 精确格局判定
-        Promise.resolve(this.determineAccuratePattern(baziChart, gender, personalizedName)),
-        // 精准大运流年分析（最耗时）
-        this.calculatePreciseFortuneAsync(baziChart, birth_date, gender, personalizedName),
-        // 综合人生指导（依赖前面结果，但可以异步处理）
-        this.generateComprehensiveLifeGuidanceAsync(baziChart, gender, personalizedName),
-        // 现代应用建议
-        Promise.resolve(this.generateModernApplications(baziChart, null, gender, personalizedName))
-      ]);
+      // 2-6. 直接调用同步函数，仅对真正异步的函数使用await
+      const wuxingAnalysis = this.performDetailedWuxingAnalysis(baziChart, gender, personalizedName);
+      const patternAnalysis = this.determineAccuratePattern(baziChart, gender, personalizedName);
+      const fortuneAnalysis = await this.calculatePreciseFortuneAsync(baziChart, birth_date, gender, personalizedName);
       
       // 更新依赖关系的分析结果
       const finalLifeGuidance = this.generateComprehensiveLifeGuidance(baziChart, patternAnalysis, wuxingAnalysis, gender, personalizedName);
       const finalModernGuidance = this.generateModernApplications(baziChart, patternAnalysis, gender, personalizedName);
 
-      return {
+      const result = {
         analysis_type: 'bazi',
         analysis_date: new Date().toISOString(),
         basic_info: {
@@ -303,27 +299,8 @@ class BaziAnalyzer {
 
   // 计算纳音五行
   calculateNayin(stem, branch) {
-    // 纳音五行对照表（60甲子纳音）
-    const nayinTable = {
-      '甲子': '海中金', '乙丑': '海中金', '丙寅': '炉中火', '丁卯': '炉中火',
-      '戊辰': '大林木', '己巳': '大林木', '庚午': '路旁土', '辛未': '路旁土',
-      '壬申': '剑锋金', '癸酉': '剑锋金', '甲戌': '山头火', '乙亥': '山头火',
-      '丙子': '涧下水', '丁丑': '涧下水', '戊寅': '城头土', '己卯': '城头土',
-      '庚辰': '白蜡金', '辛巳': '白蜡金', '壬午': '杨柳木', '癸未': '杨柳木',
-      '甲申': '泉中水', '乙酉': '泉中水', '丙戌': '屋上土', '丁亥': '屋上土',
-      '戊子': '霹雳火', '己丑': '霹雳火', '庚寅': '松柏木', '辛卯': '松柏木',
-      '壬辰': '长流水', '癸巳': '长流水', '甲午': '砂中金', '乙未': '砂中金',
-      '丙申': '山下火', '丁酉': '山下火', '戊戌': '平地木', '己亥': '平地木',
-      '庚子': '壁上土', '辛丑': '壁上土', '壬寅': '金箔金', '癸卯': '金箔金',
-      '甲辰': '覆灯火', '乙巳': '覆灯火', '丙午': '天河水', '丁未': '天河水',
-      '戊申': '大驿土', '己酉': '大驿土', '庚戌': '钗钏金', '辛亥': '钗钏金',
-      '壬子': '桑柘木', '癸丑': '桑柘木', '甲寅': '大溪水', '乙卯': '大溪水',
-      '丙辰': '沙中土', '丁巳': '沙中土', '戊午': '天上火', '己未': '天上火',
-      '庚申': '石榴木', '辛酉': '石榴木', '壬戌': '大海水', '癸亥': '大海水'
-    };
-    
     const ganzhi = stem + branch;
-    return nayinTable[ganzhi] || '大林木';
+    return this.nayinTable[ganzhi] || '大林木';
   }
   
   // 年柱计算 - 基于精确立春节气
@@ -949,35 +926,6 @@ class BaziAnalyzer {
     return strengthAdvice[strengthLevel] || `${name}，建议根据自身特点，扬长避短，稳步发展。`;
   }
 
-  // 生成平衡分析
-  generateBalanceAnalysis(elements, dayElement, strongest, weakest, name) {
-    const balance = Math.max(...Object.values(elements)) - Math.min(...Object.values(elements));
-    
-    let strengthAnalysis = '';
-    if (elements[strongest] >= 4) {
-      strengthAnalysis = `五行中${strongest}元素极为旺盛(${elements[strongest]}个)，占据主导地位，表现出强烈的${this.getElementDetailedTraits(strongest)}特质`;
-    } else if (elements[strongest] >= 3) {
-      strengthAnalysis = `五行中${strongest}元素较为旺盛(${elements[strongest]}个)，显现出明显的${this.getElementDetailedTraits(strongest)}特质`;
-    } else {
-      strengthAnalysis = '五行分布相对均匀，各种特质都有所体现';
-    }
-
-    let weaknessAnalysis = '';
-    if (elements[weakest] === 0) {
-      weaknessAnalysis = `，但完全缺乏${weakest}元素，这意味着需要特别注意培养${this.getElementMissingTraits(weakest)}方面的能力`;
-    } else if (elements[weakest] === 1) {
-      weaknessAnalysis = `，而${weakest}元素较弱(仅${elements[weakest]}个)，建议在生活中多加强${this.getElementMissingTraits(weakest)}的修养`;
-    }
-
-    const overallBalance = balance <= 1 
-      ? '整体五行平衡良好，人生发展较为稳定' 
-      : balance <= 2 
-        ? '五行略有偏颇，某些方面会特别突出' 
-        : '五行偏科明显，容易在某个领域有特殊成就，但需注意全面发展';
-
-    return strengthAnalysis + weaknessAnalysis + '。' + overallBalance;
-  }
-
   // 辅助函数实现
   getElementFromStem(stem) {
     const stemElements = {
@@ -1046,29 +994,6 @@ class BaziAnalyzer {
       '水': '智慧思考和灵活应变'
     };
     return missing[element] || '综合素质';
-  }
-
-  // 简化实现其他必要方法
-  generateImprovementSuggestions(dayElement, weakElement, strongElement, name, gender) {
-    const suggestions = [];
-    
-    if (weakElement) {
-      const elementSupplements = {
-        '木': '多接触大自然，培养耐心和成长心态，可以多使用绿色物品，向东方发展',
-        '火': '增强自信和表现力，多参加社交活动，可以多穿红色衣物，向南方发展',
-        '土': '培养稳重和信用，加强责任感，可以多接触土地和陶瓷，向中央发展',
-        '金': '提升决断力和原则性，注重品质追求，可以多使用金属制品，向西方发展',
-        '水': '增强智慧和变通能力，培养学习习惯，可以多亲近水源，向北方发展'
-      };
-      suggestions.push(`针对${weakElement}元素不足：${elementSupplements[weakElement]}`);
-    }
-
-    const genderAdvice = gender === 'male' || gender === '男' 
-      ? '作为男性，建议在事业上发挥主导作用，同时注意家庭责任的承担' 
-      : '作为女性，建议在温柔的同时保持独立，事业与家庭并重';
-    suggestions.push(genderAdvice);
-
-    return suggestions.join('；');
   }
 
   // 动态格局判定系统 - 基于十神和月令
@@ -1369,12 +1294,14 @@ class BaziAnalyzer {
     // 重新计算正确的大运序列
     const correctDayunSequence = this.calculateDayunSequence(baziChart, gender, startLuckAge);
     
+    // 确定当前大运
+    const currentDayun = this.getCurrentDayun(correctDayunSequence, currentAge);
+    
     // 并行计算分析结果
-    const [currentDayun, currentYearAnalysis, nextDecadeForecast, detailedYearlyAnalysis] = await Promise.all([
-      Promise.resolve(this.getCurrentDayun(correctDayunSequence, currentAge)),
+    const [currentYearAnalysis, nextDecadeForecast, detailedYearlyAnalysis] = await Promise.all([
       new Promise(resolve => {
         setTimeout(() => {
-          resolve(this.analyzeCurrentYear(baziChart, currentYear, this.getCurrentDayun(correctDayunSequence, currentAge)));
+          resolve(this.analyzeCurrentYear(baziChart, currentYear, currentDayun));
         }, 0);
       }),
       new Promise(resolve => {
@@ -1384,8 +1311,7 @@ class BaziAnalyzer {
       }),
       new Promise(resolve => {
         setTimeout(() => {
-          const currentDayunForAnalysis = this.getCurrentDayun(correctDayunSequence, currentAge);
-          resolve(this.generateDetailedYearlyAnalysis(baziChart, currentDayunForAnalysis, currentYear, currentAge));
+          resolve(this.generateDetailedYearlyAnalysis(baziChart, currentDayun, currentYear, currentAge));
         }, 0);
       })
     ]);
@@ -1680,23 +1606,6 @@ class BaziAnalyzer {
     }
     
     return influence;
-  }
-
-  // 异步版本的综合人生指导（优化性能）
-  async generateComprehensiveLifeGuidanceAsync(baziChart, gender, name) {
-    // 基础版本的人生指导，不依赖其他分析结果
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve({
-          comprehensive_summary: `${name}，根据您的八字分析，您具有良好的命理基础，建议充分发挥自身优势`,
-          career_guidance: '在事业发展方面，建议选择稳定发展的行业，注重积累经验',
-          wealth_guidance: '在财富管理方面，建议稳健投资，避免投机',
-          relationship_guidance: '在感情关系方面，建议真诚待人，重视家庭和谐',
-          health_guidance: '在健康养生方面，建议规律作息，适度运动',
-          self_improvement: '在个人修养方面，建议多读书学习，提升内在品质'
-        });
-      }, 0);
-    });
   }
 
   generateComprehensiveLifeGuidance(baziChart, patternAnalysis, wuxingAnalysis, gender, name) {
@@ -2379,179 +2288,6 @@ class BaziAnalyzer {
      return null;
    }
  
-   // 以下是从logic/bazi.txt中完整实现的所有辅助函数
-  
-  generateSpecificCareerAdvice(patternType, dayElement, gender) {
-    const careerAdvice = {
-      '正格': {
-        '木': gender === 'male' ? '适合教育、文化、创意产业，发挥您的创新能力' : '适合艺术设计、园林绿化、文教事业',
-        '火': gender === 'male' ? '适合销售、媒体、演艺、公关等需要表现力的工作' : '适合服务业、美容、娱乐行业',
-        '土': gender === 'male' ? '适合建筑、房地产、农业、管理等稳定行业' : '适合行政管理、会计、后勤保障工作',
-        '金': gender === 'male' ? '适合金融、法律、机械、军警等需要原则性的工作' : '适合珠宝、金融、精密制造业',
-        '水': gender === 'male' ? '适合贸易、物流、信息技术、研究工作' : '适合旅游、水产、清洁、流通行业'
-      }
-    };
-    return careerAdvice[patternType]?.[dayElement] || '根据您的特质，建议选择能发挥个人优势的稳定职业';
-  }
-
-  getCareerFocusAreas(patternType) {
-    const focusAreas = {
-      '正格': '传统行业、稳定发展、技能积累',
-      '从格': '新兴行业、快速变化、创新突破',
-      '化格': '服务行业、人际关系、沟通协调'
-    };
-    return focusAreas[patternType] || '综合发展';
-  }
-
-  generateWealthStrategy(dayElement, patternType, gender) {
-    const strategies = {
-      '木': '投资成长性行业，如科技、教育、环保等，避免过度投机',
-      '火': '适合短期投资，关注热门行业，但需控制风险',
-      '土': '稳健投资为主，房地产、基金定投，长期持有',
-      '金': '贵金属、银行理财、保险等保值增值产品',
-      '水': '流动性投资，股票、外汇，但需谨慎操作'
-    };
-    return strategies[dayElement] || '建议多元化投资，分散风险';
-  }
-
-  getWealthManagementStyle(patternType) {
-    const styles = {
-      '正格': '稳健保守，长期规划',
-      '从格': '积极进取，把握机会',
-      '化格': '灵活应变，适时调整'
-    };
-    return styles[patternType] || '平衡发展';
-  }
-
-  generateRelationshipAdvice(dayElement, gender, patternType) {
-    const advice = {
-      '木': gender === 'male' ? '寻找温柔体贴、有艺术气质的伴侣，重视精神交流' : '适合成熟稳重、有责任心的伴侣，互相扶持成长',
-      '火': gender === 'male' ? '适合活泼开朗、善于交际的伴侣，共同享受生活' : '寻找沉稳内敛、能包容您热情的伴侣',
-      '土': gender === 'male' ? '适合贤惠持家、踏实可靠的伴侣，共建温馨家庭' : '寻找有进取心、能给您安全感的伴侣',
-      '金': gender === 'male' ? '适合聪明独立、有原则的伴侣，互相尊重' : '寻找温和包容、能理解您原则性的伴侣',
-      '水': gender === 'male' ? '适合智慧灵活、善解人意的伴侣，心灵相通' : '寻找稳重可靠、能给您依靠的伴侣'
-    };
-    return advice[dayElement] || '寻找性格互补、价值观相近的伴侣';
-  }
-
-  getIdealPartnerTraits(dayElement, gender) {
-    const traits = {
-      '木': gender === 'male' ? '温柔、有艺术气质' : '成熟、有责任心',
-      '火': gender === 'male' ? '活泼、善于交际' : '沉稳、包容性强',
-      '土': gender === 'male' ? '贤惠、踏实可靠' : '进取、有安全感',
-      '金': gender === 'male' ? '聪明、有原则' : '温和、理解力强',
-      '水': gender === 'male' ? '智慧、善解人意' : '稳重、可依靠'
-    };
-    return traits[dayElement] || '性格互补';
-  }
-
-  generateHealthAdvice(dayElement, distribution) {
-    const advice = {
-      '木': '注意肝胆保养，多做户外运动，保持心情舒畅，避免过度劳累',
-      '火': '注意心血管健康，控制情绪波动，适度运动，避免熬夜',
-      '土': '注意脾胃消化，规律饮食，适量运动，避免久坐不动',
-      '金': '注意呼吸系统，保持空气清新，适度锻炼，避免过度紧张',
-      '水': '注意肾脏保养，充足睡眠，温补调理，避免过度疲劳'
-    };
-    return advice[dayElement] || '保持规律作息，均衡饮食，适度运动';
-  }
-
-  getHealthFocusAreas(dayElement) {
-    const areas = {
-      '木': '肝胆、筋骨、眼睛',
-      '火': '心脏、血管、小肠',
-      '土': '脾胃、肌肉、口腔',
-      '金': '肺部、大肠、皮肤',
-      '水': '肾脏、膀胱、耳朵'
-    };
-    return areas[dayElement] || '整体健康';
-  }
-
-  generateSelfDevelopmentPlan(patternType, dayElement, gender) {
-    return `根据您的${patternType}格局和${dayElement}日主特质，建议重点培养领导能力、沟通技巧和专业技能，${gender === 'male' ? '发挥男性的决断力和责任感' : '发挥女性的细致和包容性'}，在人生道路上稳步前进。`;
-  }
-
-  getPersonalGrowthAreas(patternType) {
-    const areas = {
-      '正格': '领导能力、专业技能、道德修养',
-      '从格': '创新思维、适应能力、机会把握',
-      '化格': '沟通协调、人际关系、灵活应变'
-    };
-    return areas[patternType] || '综合素质';
-  }
-
-  getDailyLifeStyle(patternType, dayElement) {
-    return `${patternType}格局配合${dayElement}元素的特质，适合规律而有序的生活方式`;
-  }
-
-  getIdealLivingEnvironment(dayElement) {
-    const environments = {
-      '木': '绿化良好、空气清新的环境',
-      '火': '阳光充足、通风良好的环境',
-      '土': '稳定安静、地势平坦的环境',
-      '金': '整洁有序、空间宽敞的环境',
-      '水': '临水而居、环境清幽的环境'
-    };
-    return environments[dayElement] || '舒适宜居的环境';
-  }
-
-  getOptimalSchedule(patternType) {
-    const schedules = {
-      '正格': '早睡早起，规律作息',
-      '从格': '灵活安排，适应变化',
-      '化格': '劳逸结合，张弛有度'
-    };
-    return schedules[patternType] || '规律健康的作息';
-  }
-
-  getProfessionalPath(patternType, gender) {
-    return `${patternType}格局适合${gender === 'male' ? '稳步上升的职业发展路径' : '平衡发展的职业规划'}`;
-  }
-
-  getSkillDevelopmentAreas(patternType) {
-    const areas = {
-      '正格': '专业技能、管理能力',
-      '从格': '创新能力、适应技能',
-      '化格': '沟通技巧、协调能力'
-    };
-    return areas[patternType] || '综合技能';
-  }
-
-  getInterpersonalStrengths(patternType, dayElement) {
-    return `${patternType}格局和${dayElement}元素赋予您独特的人际交往优势`;
-  }
-
-  getNetworkingStrategy(patternType) {
-    const strategies = {
-      '正格': '建立稳定的人际关系网络',
-      '从格': '广泛接触，把握机会',
-      '化格': '灵活应对，和谐相处'
-    };
-    return strategies[patternType] || '真诚待人';
-  }
-
-  getOptimalDecisionTiming(dayElement, patternType) {
-    const timings = {
-      '木': '春季和上午时段',
-      '火': '夏季和中午时段',
-      '土': '四季交替和下午时段',
-      '金': '秋季和傍晚时段',
-      '水': '冬季和夜晚时段'
-    };
-    return timings[dayElement] || '适宜的时机';
-  }
-
-  getUnfavorableTiming(dayElement) {
-    const unfavorable = {
-      '木': '秋季金旺时期',
-      '火': '冬季水旺时期',
-      '土': '春季木旺时期',
-      '金': '夏季火旺时期',
-      '水': '夏季火旺时期'
-    };
-    return unfavorable[dayElement] || '不利时期';
-  }
-  
   // 生成详细流年分析
   generateDetailedYearlyAnalysis(baziChart, currentDayun, currentYear, currentAge) {
     const yearlyAnalysis = [];

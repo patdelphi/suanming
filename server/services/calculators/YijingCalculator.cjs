@@ -12,10 +12,10 @@ class YijingCalculator {
       '乾': { binary: '111', number: 1, element: '金', nature: '阳' },
       '兑': { binary: '110', number: 2, element: '金', nature: '阴' },
       '离': { binary: '101', number: 3, element: '火', nature: '阴' },
-      '震': { binary: '100', number: 4, element: '木', nature: '阳' },
+      '震': { binary: '001', number: 4, element: '木', nature: '阳' },
       '巽': { binary: '011', number: 5, element: '木', nature: '阴' },
       '坎': { binary: '010', number: 6, element: '水', nature: '阳' },
-      '艮': { binary: '001', number: 7, element: '土', nature: '阳' },
+      '艮': { binary: '100', number: 7, element: '土', nature: '阳' },
       '坤': { binary: '000', number: 8, element: '土', nature: '阴' }
     };
     
@@ -55,10 +55,10 @@ class YijingCalculator {
       1: '111', // 乾
       2: '110', // 兑
       3: '101', // 离
-      4: '100', // 震
+      4: '001', // 震
       5: '011', // 巽
       6: '010', // 坎
-      7: '001', // 艮
+      7: '100', // 艮
       8: '000'  // 坤
     };
     return binaryMap[number] || '111';

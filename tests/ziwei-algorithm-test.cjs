@@ -178,7 +178,7 @@ const ziweiTests = [
 
 ziweiTests.forEach((test, index) => {
   const position = analyzer.calculateZiweiStarPosition(test.day, test.ju);
-  const branchName = analyzer.earthlyBranches[position];
+  const branchName = analyzer.baseData.getBranchByIndex(position);
   console.log(`${index + 1}. 初${test.day}日 ${test.ju}局 → ${branchName}宫(${position}) - ${test.expected}`);
 });
 

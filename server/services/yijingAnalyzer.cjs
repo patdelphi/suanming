@@ -178,6 +178,7 @@ class YijingAnalyzer {
   }
 
   // 梅花易数时间起卦法
+  // 传统梅花易数使用地支年数（子=1, 丑=2, ..., 亥=12）而非公历年份
   generateHexagramByTime(currentTime, userId) {
     const year = currentTime.getFullYear();
     const month = currentTime.getMonth() + 1;
@@ -185,11 +186,14 @@ class YijingAnalyzer {
     const hour = currentTime.getHours();
     const minute = currentTime.getMinutes();
     
+    // 将公历年份转换为地支年数：(年份-4) % 12 + 1，结果1-12对应子-亥
+    const zhiNumber = ((year - 4) % 12) + 1;
+    
     const userFactor = userId ? parseInt(String(userId).slice(-5).replace(/[^0-9]/g, '') || '12', 10) : 12;
     
-    const upperTrigramNum = (year + month + day + userFactor) % 8 || 8;
-    const lowerTrigramNum = (year + month + day + hour + minute + userFactor) % 8 || 8;
-    const changingLinePos = (year + month + day + hour + minute + userFactor) % 6 + 1;
+    const upperTrigramNum = (zhiNumber + month + day + userFactor) % 8 || 8;
+    const lowerTrigramNum = (zhiNumber + month + day + hour + minute + userFactor) % 8 || 8;
+    const changingLinePos = (zhiNumber + month + day + hour + minute + userFactor) % 6 + 1;
     
     const mainHexNumber = this.getHexagramNumber(upperTrigramNum, lowerTrigramNum);
     
@@ -429,11 +433,14 @@ class YijingAnalyzer {
   }
 
   // 获取互卦
+  // binary索引：[0]=line6(顶), [1]=line5, [2]=line4, [3]=line3, [4]=line2, [5]=line1(底)
   getInterHexagram(hexInfo) {
     const binary = hexInfo.binary;
-    // 互卦取2、3、4爻为下卦，3、4、5爻为上卦
-    const lowerInter = binary.substring(3, 6); // 2、3、4爻
-    const upperInter = binary.substring(2, 5); // 3、4、5爻
+    // 互卦取二、三、四爻为下卦，三、四、五爻为上卦
+    // 下卦(二三四爻): line4[2], line3[3], line2[4] → substring(2,5)
+    // 上卦(三四五爻): line5[1], line4[2], line3[3] → substring(1,4)
+    const lowerInter = binary.substring(2, 5); // 二、三、四爻
+    const upperInter = binary.substring(1, 4); // 三、四、五爻
     const interBinary = upperInter + lowerInter;
     
     for (const hexNum in this.ALL_HEXAGRAMS) {

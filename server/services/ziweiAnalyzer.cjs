@@ -495,34 +495,33 @@ class ZiweiAnalyzer {
     };
   }
 
-  // 计算紫微星位置（基于五行局）
+  // 计算紫微星位置（基于五行局的传统算法）
+  // 算法：将生日除以五行局数，根据商和余数确定紫微星在十二宫的位置
   calculateZiweiStarPosition(day, juNumber) {
-    // 根据出生日和五行局数计算紫微星位置（传统算法）
-    // 紫微星定位：以寅宫起初一，顺数至生日，再根据五行局逆数
-    let position = (day - 1) % 12; // 寅宫起初一
-    
-    // 根据五行局逆数
-    switch (juNumber) {
-      case 2: // 水二局
-        position = (position - 1 + 12) % 12;
-        break;
-      case 3: // 木三局
-        position = (position - 2 + 12) % 12;
-        break;
-      case 4: // 金四局
-        position = (position - 3 + 12) % 12;
-        break;
-      case 5: // 土五局
-        position = (position - 4 + 12) % 12;
-        break;
-      case 6: // 火六局
-        position = (position - 5 + 12) % 12;
-        break;
-      default:
-        position = (position - 4 + 12) % 12; // 默认土五局
+    if (!day || day < 1 || !juNumber || juNumber < 2) {
+      return 2; // 默认返回寅宫
     }
-    
-    return position;
+
+    const quotient = Math.floor(day / juNumber);
+    const remainder = day % juNumber;
+
+    if (remainder === 0) {
+      // 能整除：紫微星在寅宫起，顺数(商-1)位
+      // 寅=2, 顺行商-1位
+      return (2 + quotient - 1 + 12) % 12;
+    }
+
+    // 不能整除：根据余数奇偶进退
+    // 基准位：从寅宫起，顺数商位
+    const basePosition = (2 + quotient) % 12;
+
+    if (remainder % 2 === 1) {
+      // 余数为奇数：从基准位顺行 floor(余数/2)+1 位
+      return (basePosition + Math.floor(remainder / 2) + 1) % 12;
+    } else {
+      // 余数为偶数：从基准位逆行 余数/2 位
+      return (basePosition - remainder / 2 + 12) % 12;
+    }
   }
 
   // 计算真正的紫微斗数排盘
@@ -538,8 +537,12 @@ class ZiweiAnalyzer {
     const mingGongIndex = this.calculateMingGongIndex(month, hour);
     const mingGong = this.baseData.getBranchByIndex(mingGongIndex);
     
-    // 计算紫微星位置
-    const ziweiPosition = this.calculateZiweiPosition(day, mingGongIndex);
+    // 先计算八字和五行局（紫微星定位依赖五行局数）
+    const baziInfo = this.calculatePreciseBazi(birthDateStr, birthTimeStr);
+    const wuxingJu = this.calculateWuxingJu(baziInfo);
+    
+    // 计算紫微星位置（基于五行局的传统算法）
+    const ziweiPosition = this.calculateZiweiStarPosition(day, wuxingJu.number);
     
     // 排布十四主星
     const starPositions = this.arrangeMainStars(ziweiPosition, mingGongIndex);
@@ -555,10 +558,6 @@ class ZiweiAnalyzer {
     
     // 计算四化
     const siHua = this.calculateSiHua(year);
-    
-    // 计算五行局（为大限计算提供参数）
-    const baziInfo = this.calculatePreciseBazi(birthDateStr, birthTimeStr);
-    const wuxingJu = this.calculateWuxingJu(baziInfo);
     
     // 计算大限
     const majorPeriods = this.calculateMajorPeriods(mingGongIndex, gender, wuxingJu, year);
@@ -582,11 +581,11 @@ class ZiweiAnalyzer {
     return mingGongPosition;
   }
 
-  // 计算紫微星位置
+  // 计算紫微星位置（兼容方法，内部委托给正确的五行局算法）
   calculateZiweiPosition(day, mingGongIndex) {
-    // 简化的紫微星定位算法
-    const ziweiBase = (day - 1) % 12;
-    return (mingGongIndex + ziweiBase) % 12;
+    // 此方法保留兼容性，但紫微星定位必须基于五行局数
+    // 实际使用中应通过 calculateZiweiStarPosition(day, juNumber) 调用
+    return this.calculateZiweiStarPosition(day, 5); // 默认土五局，实际应传入正确局数
   }
 
   // 精确安排十四主星（传统紫微斗数安星法）
@@ -612,20 +611,20 @@ class ZiweiAnalyzer {
     // 紫微星固定位置
     starPositions[ziweiPosition].push('紫微');
     
-    // 天机星：紫微顺行一位
-    starPositions[(ziweiPosition + 1) % 12].push('天机');
+    // 天机星：紫微逆行一位
+    starPositions[(ziweiPosition - 1 + 12) % 12].push('天机');
     
-    // 太阳星：紫微顺行二位
-    starPositions[(ziweiPosition + 2) % 12].push('太阳');
+    // 太阳星：紫微逆行二位
+    starPositions[(ziweiPosition - 2 + 12) % 12].push('太阳');
     
-    // 武曲星：紫微顺行三位
-    starPositions[(ziweiPosition + 3) % 12].push('武曲');
+    // 武曲星：紫微逆行三位
+    starPositions[(ziweiPosition - 3 + 12) % 12].push('武曲');
     
-    // 天同星：紫微顺行四位
-    starPositions[(ziweiPosition + 4) % 12].push('天同');
+    // 天同星：紫微逆行四位
+    starPositions[(ziweiPosition - 4 + 12) % 12].push('天同');
     
-    // 廉贞星：紫微顺行五位
-    starPositions[(ziweiPosition + 5) % 12].push('廉贞');
+    // 廉贞星：紫微顺行一位
+    starPositions[(ziweiPosition + 1) % 12].push('廉贞');
   }
   
   // 安排天府星系（南斗六星）
@@ -852,29 +851,27 @@ class ZiweiAnalyzer {
   }
 
   // 火星安星
+  // 传统规则：寅午戌年从丑宫起子时顺行，申子辰年从寅宫起子时顺行，
+  // 巳酉丑年从卯宫起子时顺行，亥卯未年从酉宫起子时顺行
   calculateHuoxingPosition(year, hour) {
     const yearBranchIndex = (year - 4) % 12;
     const hourBranch = Math.floor((hour + 1) / 2) % 12;
-    const huoxingMap = {
-      0: [1, 2, 3, 9, 10, 11, 5, 6, 7, 1, 2, 3], // 子年
-      1: [2, 3, 4, 10, 11, 0, 6, 7, 8, 2, 3, 4], // 丑年
-      2: [0, 1, 2, 8, 9, 10, 4, 5, 6, 0, 1, 2], // 寅年
-      // ... 其他年份的映射
-    };
-    return huoxingMap[yearBranchIndex]?.[hourBranch] || 0;
+    // 火星起始宫位：寅午戌→丑(1), 申子辰→寅(2), 巳酉丑→卯(3), 亥卯未→酉(9)
+    const huoxingStartMap = [2, 3, 1, 9, 2, 3, 1, 9, 2, 3, 1, 9];
+    const startPosition = huoxingStartMap[yearBranchIndex];
+    return (startPosition + hourBranch) % 12;
   }
 
   // 铃星安星
+  // 传统规则：寅午戌年从卯宫起子时顺行，申子辰年从戌宫起子时顺行，
+  // 巳酉丑年从戌宫起子时顺行，亥卯未年从戌宫起子时顺行
   calculateLingxingPosition(year, hour) {
     const yearBranchIndex = (year - 4) % 12;
     const hourBranch = Math.floor((hour + 1) / 2) % 12;
-    const lingxingMap = {
-      0: [8, 7, 6, 4, 3, 2, 0, 11, 10, 8, 7, 6], // 子年
-      1: [9, 8, 7, 5, 4, 3, 1, 0, 11, 9, 8, 7], // 丑年
-      2: [7, 6, 5, 3, 2, 1, 11, 10, 9, 7, 6, 5], // 寅年
-      // ... 其他年份的映射
-    };
-    return lingxingMap[yearBranchIndex]?.[hourBranch] || 0;
+    // 铃星起始宫位：寅午戌→卯(3), 申子辰→戌(10), 巳酉丑→戌(10), 亥卯未→戌(10)
+    const lingxingStartMap = [10, 10, 3, 10, 10, 10, 3, 10, 10, 10, 3, 10];
+    const startPosition = lingxingStartMap[yearBranchIndex];
+    return (startPosition + hourBranch) % 12;
   }
 
   // 地空星安星
@@ -2265,7 +2262,7 @@ class ZiweiAnalyzer {
   }
 
   analyzeLiuNianFortune(yearStem, yearBranch, currentPeriod) {
-    return `${yearStem}${yearBranch}年与${currentPeriod.palace_name}大限相配，整体运势${Math.random() > 0.5 ? '向好' : '平稳'}，需要把握机会`;
+    return `${yearStem}${yearBranch}年与${currentPeriod.palace_name}大限相配，整体运势${currentPeriod.start_age % 2 === 0 ? '向好' : '平稳'}，需要把握机会`;
   }
 
   getLiuNianFocusAreas(yearStem, yearBranch) {
@@ -2362,7 +2359,7 @@ class ZiweiAnalyzer {
   }
 
   analyzeTimingCoordination(daxian, xiaoxian, liunian) {
-    return `大限、小限、流年三者协调${Math.random() > 0.5 ? '较好' : '需要注意平衡'}，建议统筹规划`;
+    return `大限、小限、流年三者协调${daxian.start_age % 2 === 0 ? '较好' : '需要注意平衡'}，建议统筹规划`;
   }
 
   getBestTimingAdvice(daxian, liunian) {
