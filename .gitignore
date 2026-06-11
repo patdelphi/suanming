@@ -55,3 +55,6 @@ numerology.db-wal
 *.db
 *.sqlite
 *.sqlite3
+
+# AI tool state
+.mimocode/
