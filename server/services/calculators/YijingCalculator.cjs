@@ -2,10 +2,12 @@
 // 专注于起卦计算逻辑，不包含卦象解释
 
 const EnhancedRandom = require('../common/EnhancedRandom.cjs');
+const BaseData = require('../common/BaseData.cjs');
 
 class YijingCalculator {
   constructor() {
     this.enhancedRandom = new EnhancedRandom();
+    this.baseData = new BaseData();
     
     // 八卦基础数据
     this.trigrams = {
@@ -339,14 +341,8 @@ class YijingCalculator {
     const upperElement = upperTrigram.element;
     const lowerElement = lowerTrigram.element;
     
-    // 五行生克关系
-    const relations = {
-      '木': { generates: '火', controls: '土', generatedBy: '水', controlledBy: '金' },
-      '火': { generates: '土', controls: '金', generatedBy: '木', controlledBy: '水' },
-      '土': { generates: '金', controls: '水', generatedBy: '火', controlledBy: '木' },
-      '金': { generates: '水', controls: '木', generatedBy: '土', controlledBy: '火' },
-      '水': { generates: '木', controls: '火', generatedBy: '金', controlledBy: '土' }
-    };
+    // 使用BaseData统一的五行生克关系
+    const relations = this.baseData.getWuxingRelations();
     
     let relationship = '和谐';
     if (relations[upperElement].generates === lowerElement) {

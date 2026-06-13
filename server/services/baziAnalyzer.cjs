@@ -2072,83 +2072,9 @@ class BaziAnalyzer {
     };
   }
   
-  // 改进的公历转农历计算方法
+  // 改进的公历转农历计算方法（使用BaseData的统一农历算法）
   calculateAccurateLunarDate(year, month, day) {
-    // 1976年春节是1976年1月31日，对应农历正月初一
-    // 使用相对准确的农历计算逻辑
-    
-    // 农历年份对照表（部分年份的春节日期）
-    const springFestivals = {
-      1976: { month: 1, day: 31 }, // 1976年春节：1月31日
-      1977: { month: 2, day: 18 },
-      1978: { month: 2, day: 7 },
-      1979: { month: 1, day: 28 },
-      1980: { month: 2, day: 16 },
-      1981: { month: 2, day: 5 },
-      1982: { month: 1, day: 25 },
-      1983: { month: 2, day: 13 },
-      1984: { month: 2, day: 2 },
-      1985: { month: 2, day: 20 },
-      1986: { month: 2, day: 9 },
-      1987: { month: 1, day: 29 },
-      1988: { month: 2, day: 17 },
-      1989: { month: 2, day: 6 },
-      1990: { month: 1, day: 27 }
-    };
-    
-    const springFestival = springFestivals[year];
-    if (!springFestival) {
-      // 如果没有对应年份数据，使用估算
-      return {
-        year: year,
-        month: month > 2 ? month - 1 : month + 11,
-        day: Math.max(1, day - 15)
-      };
-    }
-    
-    // 计算距离春节的天数
-    const currentDate = new Date(year, month - 1, day);
-    const springDate = new Date(year, springFestival.month - 1, springFestival.day);
-    const daysDiff = Math.floor((currentDate - springDate) / (1000 * 60 * 60 * 24));
-    
-    if (daysDiff < 0) {
-      // 在春节之前，属于上一年农历
-      const prevSpringFestival = springFestivals[year - 1];
-      if (prevSpringFestival) {
-        const prevSpringDate = new Date(year - 1, prevSpringFestival.month - 1, prevSpringFestival.day);
-        const prevDaysDiff = Math.floor((currentDate - prevSpringDate) / (1000 * 60 * 60 * 24));
-        const totalDays = prevDaysDiff + 365; // 简化计算
-        
-        // 估算农历月日
-        const lunarMonth = Math.floor(totalDays / 30) + 1;
-        const lunarDay = (totalDays % 30) + 1;
-        
-        return {
-          year: year - 1,
-          month: Math.min(12, lunarMonth),
-          day: Math.min(30, lunarDay)
-        };
-      }
-    }
-    
-    // 在春节之后，计算农历月日
-    const lunarMonth = Math.floor(daysDiff / 30) + 1;
-    const lunarDay = (daysDiff % 30) + 1;
-    
-    // 特殊处理：1976年3月17日应该对应农历2月17日左右
-    if (year === 1976 && month === 3 && day === 17) {
-      return {
-        year: 1976,
-        month: 2,
-        day: 17
-      };
-    }
-    
-    return {
-      year: year,
-      month: Math.min(12, lunarMonth),
-      day: Math.min(30, Math.max(1, lunarDay))
-    };
+    return this.baseData.solarToLunar(year, month, day);
   }
   
   // 计算节气信息

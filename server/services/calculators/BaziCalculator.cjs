@@ -22,11 +22,12 @@ class BaziCalculator {
     const hour = timeInfo.hour;
     const minute = timeInfo.minute;
     
-    // 计算年柱
-    const yearPillar = this.calculateYearPillar(year);
+    // 计算年柱（考虑立春）
+    const yearPillar = this.calculateYearPillar(year, month, day, hour, longitude, latitude);
     
-    // 计算月柱（基于精确节气）
-    const monthPillar = this.calculateMonthPillar(year, month, day, hour, longitude, latitude);
+    // 计算月柱（基于精确节气，使用年柱的有效年干）
+    const effectiveYearStemIndex = this.baseData.getStemIndex(yearPillar.stem);
+    const monthPillar = this.calculateMonthPillar(year, month, day, hour, effectiveYearStemIndex, longitude, latitude);
     
     // 计算日柱
     const dayPillar = this.calculateDayPillar(year, month, day);
@@ -79,20 +80,33 @@ class BaziCalculator {
     return { hour: 12, minute: 0 };
   }
   
-  // 计算年柱
-  calculateYearPillar(year) {
-    const stemIndex = (year - 4) % 10;
-    const branchIndex = (year - 4) % 12;
+  // 计算年柱（考虑立春，立春前算上一年）
+  calculateYearPillar(year, month, day, hour = 12, longitude = 116.4, latitude = 39.9) {
+    // 获取当年立春时间（UTC时刻）
+    const lichunUTC = this.solarTerms.calculateSolarTermTime(year, 0, longitude, latitude);
+    // 出生日期的UTC时刻
+    const birthUTC = new Date(Date.UTC(year, month - 1, day, hour, 0, 0));
+    
+    // 立春前算上一年
+    let effectiveYear = year;
+    if (lichunUTC && birthUTC < lichunUTC) {
+      effectiveYear = year - 1;
+    }
+    
+    const stemIndex = (effectiveYear - 4) % 10;
+    const branchIndex = (effectiveYear - 4) % 12;
     
     return {
       stem: this.baseData.getStemByIndex(stemIndex),
       branch: this.baseData.getBranchByIndex(branchIndex),
-      element: this.baseData.getStemElement(this.baseData.getStemByIndex(stemIndex))
+      element: this.baseData.getStemElement(this.baseData.getStemByIndex(stemIndex)),
+      effective_year: effectiveYear,
+      lichun_adjusted: effectiveYear !== year
     };
   }
   
   // 计算月柱（基于精确节气）
-  calculateMonthPillar(year, month, day, hour = 12, longitude = 116.4, latitude = 39.9) {
+  calculateMonthPillar(year, month, day, hour, yearStemIndex, longitude = 116.4, latitude = 39.9) {
     const birthDate = new Date(year, month - 1, day, hour);
     
     // 获取当前日期的节气信息
@@ -103,15 +117,9 @@ class BaziCalculator {
     if (solarTermInfo) {
       const currentTerm = solarTermInfo.current;
       lunarMonth = this.getSolarTermMonth(currentTerm.index);
-      
-      // 如果在节气交替期间，需要精确判断
-      if (birthDate < currentTerm.localTime) {
-        lunarMonth = lunarMonth === 1 ? 12 : lunarMonth - 1;
-      }
     }
     
     // 根据年干和农历月份计算月柱
-    const yearStemIndex = (year - 4) % 10;
     const monthStemIndex = this.calculateMonthStem(yearStemIndex, lunarMonth);
     const monthBranchIndex = (lunarMonth + 1) % 12;
     
@@ -139,22 +147,25 @@ class BaziCalculator {
     return termMonths[termIndex] || 1;
   }
   
-  // 计算月干
+  // 计算月干（五虎遁月公式）
   calculateMonthStem(yearStemIndex, lunarMonth) {
-    // 月干计算公式：年干 * 2 + 月支 - 2
-    const monthBranchIndex = (lunarMonth + 1) % 12;
-    return (yearStemIndex * 2 + monthBranchIndex) % 10;
+    // 五虎遁月：甲己之年丙作首，乙庚之岁戊为头，
+    // 丙辛必定寻庚起，丁壬壬位顺行流，戊癸之年甲寅求
+    // 寅月天干 = (yearStemIndex % 5) * 2 + 2
+    // 其他月份按顺序递增，lunarMonth=1对应寅月
+    return (((yearStemIndex % 5) * 2 + lunarMonth + 1) % 10 + 10) % 10;
   }
   
   // 计算日柱
   calculateDayPillar(year, month, day) {
-    // 使用简化的日柱计算公式
-    const baseDate = new Date(1900, 0, 1);
-    const targetDate = new Date(year, month - 1, day);
+    // 使用UTC日期避免时区导致的日期偏移
+    // 基准：2000-01-07为甲子日 (stem=0, branch=0)
+    const baseDate = Date.UTC(2000, 0, 7);
+    const targetDate = Date.UTC(year, month - 1, day);
     const daysDiff = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
     
-    const stemIndex = (daysDiff + 9) % 10; // 1900年1月1日为己亥日
-    const branchIndex = (daysDiff + 11) % 12;
+    const stemIndex = ((daysDiff % 10) + 10) % 10;
+    const branchIndex = ((daysDiff % 12) + 12) % 12;
     
     const stem = this.baseData.getStemByIndex(stemIndex);
     const branch = this.baseData.getBranchByIndex(branchIndex);
@@ -317,7 +328,9 @@ class BaziCalculator {
     const monthBranchIndex = this.baseData.getBranchIndex(baziChart.month_pillar.branch);
     
     const dayunSequence = [];
-    const isYangYear = monthStemIndex % 2 === 0;
+    // 大运顺逆由年干阴阳决定（非月干）
+    const yearStemIndex = this.baseData.getStemIndex(baziChart.year_pillar.stem);
+    const isYangYear = yearStemIndex % 2 === 0;
     const direction = (gender === 'male' && isYangYear) || (gender === 'female' && !isYangYear) ? 1 : -1;
     
     for (let i = 0; i < 8; i++) {
@@ -337,23 +350,47 @@ class BaziCalculator {
     return dayunSequence;
   }
   
-  // 计算起运年龄
-  calculateStartLuckAge(baziChart, birthDate, gender) {
-    // 简化计算，实际应该根据节气精确计算
-    const monthBranch = baziChart.month_pillar.branch;
-    const isYangYear = this.baseData.getStemIndex(baziChart.year_pillar.stem) % 2 === 0;
+  // 计算起运年龄（基于出生日到节气的天数）
+  calculateStartLuckAge(baziChart, birthDate, gender, longitude = 116.4, latitude = 39.9) {
+    const yearStemIndex = this.baseData.getStemIndex(baziChart.year_pillar.stem);
+    const isYangYear = yearStemIndex % 2 === 0;
+    const isForward = (gender === 'male' && isYangYear) || (gender === 'female' && !isYangYear);
     
-    // 基础起运年龄
-    let baseAge = 8;
+    // 计算出生日到下一个/上一个节气的天数
+    const birth = new Date(birthDate);
+    const birthYear = birth.getFullYear();
     
-    // 根据性别和年份阴阳调整
-    if ((gender === 'male' && isYangYear) || (gender === 'female' && !isYangYear)) {
-      baseAge = 8; // 顺行
-    } else {
-      baseAge = 2; // 逆行
+    // 获取当前月柱对应的节气（节）
+    const monthIdx = baziChart.month_pillar ? 
+      this.baseData.getBranchIndex(baziChart.month_pillar.branch) : 2;
+    
+    // 计算到目标节气的天数差
+    let daysDiff = 0;
+    try {
+      // 月支转节气索引：寅月(2)->立春(0), 卯月(3)->惊蛰(2)...
+      const termIndex = Math.max(0, (monthIdx - 2 + 12) % 12) * 2;
+      
+      if (isForward) {
+        // 顺行：计算到下一个节的距离
+        const nextTermIndex = (termIndex + 2) % 24;
+        const nextTermDate = this.solarTerms.calculateSolarTermTime(birthYear, nextTermIndex, longitude, latitude);
+        if (nextTermDate) {
+          daysDiff = Math.abs(Math.floor((nextTermDate - birth) / 86400000));
+        }
+      } else {
+        // 逆行：计算到上一个节的距离
+        const prevTermDate = this.solarTerms.calculateSolarTermTime(birthYear, termIndex, longitude, latitude);
+        if (prevTermDate) {
+          daysDiff = Math.abs(Math.floor((birth - prevTermDate) / 86400000));
+        }
+      }
+    } catch (e) {
+      daysDiff = 0;
     }
     
-    return baseAge;
+    // 三天折一年，余一天折四个月
+    const startAge = Math.round(daysDiff / 3);
+    return Math.max(1, Math.min(startAge, 10)); // 限制在1-10岁范围
   }
   
   // 计算十神关系
@@ -377,19 +414,19 @@ class BaziCalculator {
     const targetIndex = this.baseData.getStemIndex(targetStem);
     
     const diff = (targetIndex - dayMasterIndex + 10) % 10;
-    const isYang = dayMasterIndex % 2 === 0;
     
+    // 十神映射：偶数差=同阴阳，奇数差=异阴阳
     const tenGodMap = {
       0: '比肩',
-      1: isYang ? '劫财' : '劫财',
-      2: isYang ? '食神' : '伤官',
-      3: isYang ? '伤官' : '食神',
-      4: isYang ? '偏财' : '正财',
-      5: isYang ? '正财' : '偏财',
-      6: isYang ? '七杀' : '正官',
-      7: isYang ? '正官' : '七杀',
-      8: isYang ? '偏印' : '正印',
-      9: isYang ? '正印' : '偏印'
+      1: '劫财',
+      2: '食神',
+      3: '伤官',
+      4: '偏财',
+      5: '正财',
+      6: '七杀',
+      7: '正官',
+      8: '偏印',
+      9: '正印'
     };
     
     return tenGodMap[diff] || '未知';

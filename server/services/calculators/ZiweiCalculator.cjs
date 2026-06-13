@@ -22,18 +22,17 @@ class ZiweiCalculator {
     // 六煞星
     this.unluckyStars = ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫'];
     
-    // 四化表
-    this.sihuaTable = {
-      '甲': { lu: '廉贞', quan: '破军', ke: '武曲', ji: '太阳' },
-      '乙': { lu: '天机', quan: '天梁', ke: '紫微', ji: '太阴' },
-      '丙': { lu: '天同', quan: '天机', ke: '文昌', ji: '廉贞' },
-      '丁': { lu: '太阴', quan: '天同', ke: '天机', ji: '巨门' },
-      '戊': { lu: '贪狼', quan: '太阴', ke: '右弼', ji: '天机' },
-      '己': { lu: '武曲', quan: '贪狼', ke: '天梁', ji: '文曲' },
-      '庚': { lu: '太阳', quan: '武曲', ke: '太阴', ji: '天同' },
-      '辛': { lu: '巨门', quan: '太阳', ke: '文曲', ji: '文昌' },
-      '壬': { lu: '天梁', quan: '紫微', ke: '左辅', ji: '武曲' },
-      '癸': { lu: '破军', quan: '巨门', ke: '太阴', ji: '贪狼' }
+    // 四化表（使用BaseData统一提供）
+    this.sihuaTable = this.baseData.getSiHuaTable();
+    
+    // 紫微星位置查找表[局数][日数-1] = 地支索引
+    // 基于《紫微斗数全书》安星法，参考标准万年历对照表
+    this.ziweiTable = {
+      2: [1,2,4,3,5,4,6,5,7,6,8,7,10,9,11,10,0,11,2,1,4,3,6,5,8,7,10,9,0,11],
+      3: [0,1,2,3,5,4,6,5,7,8,6,9,8,10,7,11,10,0,11,1,2,3,5,4,6,5,7,8,6,9],
+      4: [2,1,0,11,3,2,1,0,4,3,2,5,6,5,4,3,7,6,9,8,11,10,7,8,1,0,11,6,9,10],
+      5: [4,3,2,1,0,5,4,3,2,9,8,7,6,1,0,11,10,3,2,1,0,7,6,5,4,11,10,9,8,3],
+      6: [10,7,11,8,5,2,9,6,4,0,11,10,8,9,7,6,4,3,0,1,11,8,5,6,2,3,4,0,5,6]
     };
   }
   
@@ -51,11 +50,12 @@ class ZiweiCalculator {
     // 计算身宫
     const shenGong = this.calculateShenGong(lunarInfo.month, lunarInfo.hour);
     
-    // 计算五行局
-    const wuxingJu = this.calculateWuxingJu(mingGong.index);
+    // 计算五行局（需要命宫地支和年干）
+    const yearStemIndex = this.baseData.getStemIndex(baziChart.year_pillar.stem);
+    const wuxingJu = this.calculateWuxingJu(mingGong.index, yearStemIndex);
     
-    // 安排十四主星
-    const mainStarPositions = this.arrangeMainStars(mingGong.index, lunarInfo.day);
+    // 安排十四主星（基于五行局和农历日）
+    const mainStarPositions = this.arrangeMainStars(wuxingJu.number, lunarInfo.day);
     
     // 安排六吉星
     const luckyStarPositions = this.arrangeLuckyStars(baziChart, lunarInfo);
@@ -63,8 +63,8 @@ class ZiweiCalculator {
     // 安排六煞星
     const unluckyStarPositions = this.arrangeUnluckyStars(baziChart, lunarInfo);
     
-    // 计算四化
-    const siHua = this.calculateSiHua(baziChart.birth_info.year);
+    // 计算四化（使用年柱的天干，已考虑立春调整）
+    const siHua = this.calculateSiHua(baziChart.year_pillar.stem);
     
     // 生成十二宫位
     const twelvePalaces = this.generateTwelvePalaces(
@@ -88,15 +88,24 @@ class ZiweiCalculator {
     };
   }
   
-  // 计算农历信息（简化版）
+  // 计算农历信息（使用BaseData的农历转换）
   calculateLunarInfo(birth_date) {
     const birthDate = new Date(birth_date);
+    const year = birthDate.getFullYear();
+    const month = birthDate.getMonth() + 1;
+    const day = birthDate.getDate();
     
-    // 简化的农历转换，实际应该使用精确的农历算法
+    // 使用精确的公历转农历算法
+    const lunar = this.baseData.solarToLunar(year, month, day);
+    
     return {
-      year: birthDate.getFullYear(),
-      month: birthDate.getMonth() + 1,
-      day: birthDate.getDate(),
+      year: lunar.year,
+      month: lunar.month,
+      day: lunar.day,
+      isLeap: lunar.isLeap,
+      solar_year: year,
+      solar_month: month,
+      solar_day: day,
       hour: this.getHourIndex(birthDate.getHours())
     };
   }
@@ -142,28 +151,29 @@ class ZiweiCalculator {
     };
   }
   
-  // 计算五行局
-  calculateWuxingJu(mingGongIndex) {
-    const wuxingJuTable = {
-      0: { name: '水二局', number: 2, element: '水' },  // 子
-      1: { name: '土五局', number: 5, element: '土' },  // 丑
-      2: { name: '木三局', number: 3, element: '木' },  // 寅
-      3: { name: '木三局', number: 3, element: '木' },  // 卯
-      4: { name: '土五局', number: 5, element: '土' },  // 辰
-      5: { name: '火六局', number: 6, element: '火' },  // 巳
-      6: { name: '火六局', number: 6, element: '火' },  // 午
-      7: { name: '土五局', number: 5, element: '土' },  // 未
-      8: { name: '金四局', number: 4, element: '金' },  // 申
-      9: { name: '金四局', number: 4, element: '金' },  // 酉
-      10: { name: '土五局', number: 5, element: '土' }, // 戌
-      11: { name: '水二局', number: 2, element: '水' }  // 亥
+  // 计算五行局（基于命宫天干的纳音五行）
+  calculateWuxingJu(mingGongIndex, yearStemIndex) {
+    // 命宫天干：使用五虎遁月公式
+    // 命宫地支对应的月份 = (mingGongIndex - 2 + 12) % 12 + 1
+    const lunarMonth = (mingGongIndex - 2 + 12) % 12 + 1;
+    const mingStemIndex = (((yearStemIndex % 5) * 2 + lunarMonth + 1) % 10 + 10) % 10;
+    
+    // 纳音五行决定五行局
+    const nayin = this.baseData.getNayinWuxing(mingStemIndex, mingGongIndex);
+    
+    const wuxingJuMap = {
+      '金': { name: '金四局', number: 4, element: '金' },
+      '木': { name: '木三局', number: 3, element: '木' },
+      '水': { name: '水二局', number: 2, element: '水' },
+      '火': { name: '火六局', number: 6, element: '火' },
+      '土': { name: '土五局', number: 5, element: '土' }
     };
     
-    return wuxingJuTable[mingGongIndex] || wuxingJuTable[0];
+    return wuxingJuMap[nayin.element] || wuxingJuMap['水'];
   }
   
-  // 安排十四主星
-  arrangeMainStars(mingGongIndex, day) {
+  // 安排十四主星（基于紫微安星法）
+  arrangeMainStars(wuxingJuNumber, lunarDay) {
     const starPositions = {};
     
     // 初始化所有宫位
@@ -171,65 +181,58 @@ class ZiweiCalculator {
       starPositions[i] = [];
     }
     
-    // 紫微星系的安排（简化版）
-    const ziweiPosition = this.calculateZiweiPosition(mingGongIndex, day);
+    // 紫微星位置：查表法，基于五行局数和农历日
+    const day = Math.max(1, Math.min(lunarDay, 30));
+    const ziweiPosition = (this.ziweiTable[wuxingJuNumber] || this.ziweiTable[2])[day - 1];
     starPositions[ziweiPosition].push('紫微');
     
-    // 天机星在紫微的下一宫
-    const tianjixPosition = (ziweiPosition + 1) % 12;
-    starPositions[tianjixPosition].push('天机');
+    // 紫微星系：紫微逆时针排列
+    // 口诀：“紫微逆去天机星，隔一太阳武曲辰，连接天同空二宫，廉贞居处方是真”
+    // 紫微->天机(前1)->空->太阳(前3)->武曲(前4)->天同(前5)->空->空->廉贞(前8)
+    const tianji = (ziweiPosition - 1 + 12) % 12;
+    starPositions[tianji].push('天机');
     
-    // 太阳星的安排
-    const taiyangPosition = this.calculateTaiyangPosition(day);
-    starPositions[taiyangPosition].push('太阳');
+    const taiyang = (ziweiPosition - 3 + 12) % 12;
+    starPositions[taiyang].push('太阳');
     
-    // 武曲星在太阳的对宫
-    const wuquPosition = (taiyangPosition + 6) % 12;
-    starPositions[wuquPosition].push('武曲');
+    const wuqu = (ziweiPosition - 4 + 12) % 12;
+    starPositions[wuqu].push('武曲');
     
-    // 天同星的安排
-    const tiantongPosition = this.calculateTiantongPosition(mingGongIndex);
-    starPositions[tiantongPosition].push('天同');
+    const tiantong = (ziweiPosition - 5 + 12) % 12;
+    starPositions[tiantong].push('天同');
     
-    // 其他主星的简化安排
-    this.arrangeOtherMainStars(starPositions, mingGongIndex, day);
+    const lianzhen = (ziweiPosition - 8 + 12) % 12;
+    starPositions[lianzhen].push('廉贞');
+    
+    // 天府星位置：与紫微关于寅申轴对称
+    // 公式：天府 = (16 - 紫微) % 12
+    const tianfu = (16 - ziweiPosition) % 12;
+    starPositions[tianfu].push('天府');
+    
+    // 天府星系：天府顺时针排列
+    // 天府->太阴(后1)->贪狼(后2)->巨门(后3)->天相(后4)->天梁(后5)->七杀(后6)->空->空->破军(后10)
+    const taiyin = (tianfu + 1) % 12;
+    starPositions[taiyin].push('太阴');
+    
+    const tanlang = (tianfu + 2) % 12;
+    starPositions[tanlang].push('贪狼');
+    
+    const jumen = (tianfu + 3) % 12;
+    starPositions[jumen].push('巨门');
+    
+    const tianxiang = (tianfu + 4) % 12;
+    starPositions[tianxiang].push('天相');
+    
+    const tianliang = (tianfu + 5) % 12;
+    starPositions[tianliang].push('天梁');
+    
+    const qisha = (tianfu + 6) % 12;
+    starPositions[qisha].push('七杀');
+    
+    const pojun = (tianfu + 10) % 12;
+    starPositions[pojun].push('破军');
     
     return starPositions;
-  }
-  
-  // 计算紫微星位置
-  calculateZiweiPosition(mingGongIndex, day) {
-    // 简化的紫微星安排公式
-    const ziweiTable = {
-      1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10,
-      11: 11, 12: 0, 13: 1, 14: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 20: 8,
-      21: 9, 22: 10, 23: 11, 24: 0, 25: 1, 26: 2, 27: 3, 28: 4, 29: 5, 30: 6
-    };
-    
-    return ziweiTable[day] || 0;
-  }
-  
-  // 计算太阳星位置
-  calculateTaiyangPosition(day) {
-    // 太阳星按日期安排
-    return (day - 1) % 12;
-  }
-  
-  // 计算天同星位置
-  calculateTiantongPosition(mingGongIndex) {
-    // 天同星相对命宫的位置
-    return (mingGongIndex + 4) % 12;
-  }
-  
-  // 安排其他主星
-  arrangeOtherMainStars(starPositions, mingGongIndex, day) {
-    // 简化的其他主星安排
-    const otherStars = ['廉贞', '天府', '太阴', '贪狼', '巨门', '天相', '天梁', '七杀', '破军'];
-    
-    otherStars.forEach((star, index) => {
-      const position = (mingGongIndex + index + 2) % 12;
-      starPositions[position].push(star);
-    });
   }
   
   // 安排六吉星
@@ -372,10 +375,12 @@ class ZiweiCalculator {
     return (hour + 1) % 12;
   }
   
-  // 计算四化
-  calculateSiHua(year) {
-    const yearStemIndex = (year - 4) % 10;
-    const yearStem = this.baseData.getStemByIndex(yearStemIndex);
+  // 计算四化（使用BaseData统一四化表）
+  calculateSiHua(yearStem) {
+    // yearStem可以是天干字符串（如'甲'）或年份数字
+    if (typeof yearStem === 'number') {
+      yearStem = this.baseData.getStemByIndex((yearStem - 4) % 10);
+    }
     const siHua = this.sihuaTable[yearStem] || this.sihuaTable['甲'];
     
     return {
@@ -421,11 +426,18 @@ class ZiweiCalculator {
     return palaces;
   }
   
-  // 计算大限（基于五行局）
-  calculateMajorPeriods(mingGongIndex, gender, wuxingJu, birthYear) {
+  // 计算大限（基于五行局和命宫天干阴阳）
+  calculateMajorPeriods(mingGongIndex, gender, wuxingJu, birthYear, yearStemIndex) {
     const periods = [];
     const startAge = wuxingJu.number;
-    const direction = gender === 'male' ? 1 : -1;
+    
+    // 大限方向由命宫天干阴阳和性别共同决定
+    const lunarMonth = (mingGongIndex - 2 + 12) % 12 + 1;
+    const monthBranchIndex = (lunarMonth + 1) % 12;
+    const mingStemIndex = (((yearStemIndex % 5) * 2 + monthBranchIndex) % 10 + 10) % 10;
+    const isYangMing = mingStemIndex % 2 === 0;
+    const isMale = gender === 'male' || gender === '男';
+    const direction = (isMale && isYangMing) || (!isMale && !isYangMing) ? 1 : -1;
     
     for (let i = 0; i < 12; i++) {
       const palaceIndex = (mingGongIndex + direction * i + 12) % 12;

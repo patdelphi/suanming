@@ -46,19 +46,8 @@ class ZiweiAnalyzer {
        '水二局': 2, '木三局': 3, '金四局': 4, '土五局': 5, '火六局': 6
      };
      
-     // 四化表
-     this.sihuaTable = {
-       '甲': { lu: '廉贞', quan: '破军', ke: '武曲', ji: '太阳' },
-       '乙': { lu: '天机', quan: '天梁', ke: '紫微', ji: '太阴' },
-       '丙': { lu: '天同', quan: '天机', ke: '文昌', ji: '廉贞' },
-       '丁': { lu: '太阴', quan: '天同', ke: '天机', ji: '巨门' },
-       '戊': { lu: '贪狼', quan: '太阴', ke: '右弼', ji: '天机' },
-       '己': { lu: '武曲', quan: '贪狼', ke: '天梁', ji: '文曲' },
-       '庚': { lu: '太阳', quan: '武曲', ke: '太阴', ji: '天同' },
-       '辛': { lu: '巨门', quan: '太阳', ke: '文曲', ji: '文昌' },
-       '壬': { lu: '天梁', quan: '紫微', ke: '左辅', ji: '武曲' },
-       '癸': { lu: '破军', quan: '巨门', ke: '太阴', ji: '贪狼' }
-     };
+     // 使用BaseData统一的四化表
+     this.sihuaTable = this.baseData.getSiHuaTable();
    }
   
   // 计算农历信息（复用八字分析器的农历算法）
@@ -433,17 +422,21 @@ class ZiweiAnalyzer {
     };
   }
 
-  // 计算精确的命宫位置
+  // 计算精确的命宫位置（使用农历月日）
   calculateMingGongPosition(birthDateStr, birthTimeStr) {
     const birthDate = new Date(birthDateStr);
     const [hour, minute] = birthTimeStr ? birthTimeStr.split(':').map(Number) : [12, 0];
     
+    // 使用农历月日计算命宫
+    const year = birthDate.getFullYear();
     const month = birthDate.getMonth() + 1;
     const day = birthDate.getDate();
+    const lunarInfo = this.baseData.solarToLunar(year, month, day);
+    const lunarMonth = lunarInfo.month;
     
     // 紫微斗数命宫计算：寅宫起正月，顺数至生月，再从生月宫逆数至生时
     // 寅宫起正月：寅=2, 卯=3, 辰=4, 巳=5, 午=6, 未=7, 申=8, 酉=9, 戌=10, 亥=11, 子=0, 丑=1
-    const monthPosition = (month + 1) % 12; // 寅宫起正月
+    const monthPosition = (lunarMonth + 1) % 12; // 寅宫起正月
     
     // 时辰对应地支：子=0, 丑=1, 寅=2, ..., 亥=11
     const hourBranch = Math.floor((hour + 1) / 2) % 12;
@@ -458,14 +451,19 @@ class ZiweiAnalyzer {
     };
   }
 
-  // 计算完整的紫微斗数排盘
+  // 计算完整的紫微斗数排盘（使用农历日）
   calculateCompleteStarChart(birthDateStr, birthTimeStr, gender, wuxingJu, mingGongPosition) {
     const birthDate = new Date(birthDateStr);
+    const year = birthDate.getFullYear();
+    const month = birthDate.getMonth() + 1;
     const day = birthDate.getDate();
+    // 使用农历日计算紫微星位置
+    const lunarInfo = this.baseData.solarToLunar(year, month, day);
+    const lunarDay = lunarInfo.day;
     const mingGongIndex = mingGongPosition.index;
     
-    // 计算紫微星位置
-    const ziweiPosition = this.calculateZiweiStarPosition(day, wuxingJu.number);
+    // 计算紫微星位置（使用农历日）
+    const ziweiPosition = this.calculateZiweiStarPosition(lunarDay, wuxingJu.number);
     
     // 安排十四主星
     const mainStarPositions = this.arrangeMainStars(ziweiPosition, mingGongIndex);

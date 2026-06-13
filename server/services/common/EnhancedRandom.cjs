@@ -56,20 +56,8 @@ class EnhancedRandom {
   
   // 获取高质量随机数（0-1之间）
   getHighQualityRandom() {
-    // 使用线性同余生成器改进版
-    const a = 1664525;
-    const c = 1013904223;
-    const m = 2147483647;
-    
-    this.currentIndex = (this.currentIndex + 1) % this.poolSize;
-    this.seedPool[this.currentIndex] = (a * this.seedPool[this.currentIndex] + c) % m;
-    
-    // 结合crypto随机数提高质量
-    const cryptoRandom = crypto.randomBytes(4).readUInt32BE(0) / 4294967295;
-    const poolRandom = this.seedPool[this.currentIndex] / m;
-    
-    // 使用XOR混合提高随机性
-    return (poolRandom + cryptoRandom) / 2;
+    // 直接使用crypto生成高质量随机数，无需LCG辅助
+    return crypto.randomBytes(4).readUInt32BE(0) / 4294967295;
   }
   
   // 模拟真实硬币投掷

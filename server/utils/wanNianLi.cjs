@@ -13,18 +13,18 @@ class WanNianLi {
     // 权威万年历日柱数据（基于传统万年历标准）
     return {
       // 2024年关键日期
-      '2024-02-03': { stem: '丙', branch: '午', stemIndex: 2, branchIndex: 6 },
-      '2024-03-04': { stem: '戊', branch: '申', stemIndex: 4, branchIndex: 8 },
-      '2024-05-01': { stem: '庚', branch: '午', stemIndex: 6, branchIndex: 6 },
+      '2024-02-03': { stem: '丁', branch: '酉', stemIndex: 3, branchIndex: 9 },
+      '2024-03-04': { stem: '丁', branch: '卯', stemIndex: 3, branchIndex: 3 },
+      '2024-05-01': { stem: '乙', branch: '丑', stemIndex: 1, branchIndex: 1 },
       
       // 2023年关键日期
-      '2023-03-22': { stem: '壬', branch: '子', stemIndex: 8, branchIndex: 0 },
+      '2023-03-22': { stem: '己', branch: '卯', stemIndex: 5, branchIndex: 3 },
       
       // 1990年关键日期
       '1990-01-15': { stem: '庚', branch: '辰', stemIndex: 6, branchIndex: 4 },
       
       // 1976年关键日期
-      '1976-03-17': { stem: '己', branch: '巳', stemIndex: 5, branchIndex: 5 }
+      '1976-03-17': { stem: '戊', branch: '辰', stemIndex: 4, branchIndex: 4 }
     };
   }
 
@@ -58,12 +58,10 @@ class WanNianLi {
     const currentDate = new Date(year, month - 1, day);
     const daysDiff = Math.floor((currentDate - baseDate) / (1000 * 60 * 60 * 24));
     
-    const baseDayIndex = 10; // 甲戌日的序列号
-    const totalDays = baseDayIndex + daysDiff;
-    const dayIndex = ((totalDays % 60) + 60) % 60;
-    
-    const stemIndex = dayIndex % 10;
-    const branchIndex = dayIndex % 12;
+    // 基准：1900年1月1日为甲戌日 (stem=0甲, branch=10戌)
+    // 注意：天干地支必须分别用模10和模12计算，不能用统一的模60
+    const stemIndex = ((daysDiff % 10) + 10) % 10;
+    const branchIndex = ((daysDiff + 10) % 12 + 12) % 12;
     
     return {
       stem: heavenlyStems[stemIndex],

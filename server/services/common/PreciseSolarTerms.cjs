@@ -60,7 +60,10 @@ class PreciseSolarTerms {
     // 使用牛顿迭代法精确计算
     for (let iteration = 0; iteration < 10; iteration++) {
       const currentLongitude = this.calculateSunLongitude(estimatedTime);
-      const longitudeDiff = this.normalizeLongitude(targetLongitude - currentLongitude);
+      // 计算最短角距离（-180, 180]，避免 normalizeLongitude 将微小负差变为近360°
+      let longitudeDiff = targetLongitude - currentLongitude;
+      while (longitudeDiff > 180) longitudeDiff -= 360;
+      while (longitudeDiff <= -180) longitudeDiff += 360;
       
       if (Math.abs(longitudeDiff) < 0.0001) break; // 精度达到要求
       
@@ -158,25 +161,47 @@ class PreciseSolarTerms {
     const year = date.getFullYear();
     const yearTerms = this.calculateYearSolarTerms(year, longitude, latitude);
     
-    // 找到日期所在的节气区间
-    for (let i = 0; i < yearTerms.length; i++) {
-      const currentTerm = yearTerms[i];
-      const nextTerm = yearTerms[(i + 1) % 24];
+    // 将日期转换为经度对应的本地时间表示（与localTime保持一致）
+    const timezoneOffsetMs = Math.round(longitude / 15) * 60 * 60 * 1000;
+    const localDate = new Date(date.getTime() + timezoneOffsetMs);
+    
+    // 构建完整的节气列表：从上一年的大雪开始，按时间顺序到当年的冬至结束
+    // 因为1月初的日期可能在上一年的大雪/冬至范围内
+    const prevYearTerms = this.calculateYearSolarTerms(year - 1, longitude, latitude);
+    const extendedTerms = [
+      prevYearTerms[20], // 大雪 (上年12月)
+      prevYearTerms[21], // 冬至 (上年12月)
+      yearTerms[22],     // 小寒 (当年1月)
+      yearTerms[23],     // 大寒 (当年1月)
+      ...yearTerms.slice(0, 22) // 立春(0)到冬至(21)
+    ];
+    
+    // 找到日期所在的节气区间（使用本地时间表示进行比较）
+    for (let i = 0; i < extendedTerms.length; i++) {
+      const currentTerm = extendedTerms[i];
+      const nextTerm = extendedTerms[i + 1];
+      if (!nextTerm) break;
       
-      let nextTermTime = nextTerm.localTime;
-      if (nextTerm.index === 0) { // 下一年的立春
-        const nextYearTerms = this.calculateYearSolarTerms(year + 1, longitude, latitude);
-        nextTermTime = nextYearTerms[0].localTime;
-      }
-      
-      if (date >= currentTerm.localTime && date < nextTermTime) {
+      if (localDate >= currentTerm.localTime && localDate < nextTerm.localTime) {
         return {
           current: currentTerm,
           next: nextTerm,
-          daysFromCurrent: Math.floor((date - currentTerm.localTime) / (24 * 60 * 60 * 1000)),
-          daysToNext: Math.floor((nextTermTime - date) / (24 * 60 * 60 * 1000))
+          daysFromCurrent: Math.floor((localDate - currentTerm.localTime) / (24 * 60 * 60 * 1000)),
+          daysToNext: Math.floor((nextTerm.localTime - localDate) / (24 * 60 * 60 * 1000))
         };
       }
+    }
+    
+    // 检查是否在当年最后一个节气（冬至）之后
+    const lastTerm = extendedTerms[extendedTerms.length - 1]; // 冬至 (Dec)
+    if (localDate >= lastTerm.localTime) {
+      const nextYearTerms = this.calculateYearSolarTerms(year + 1, longitude, latitude);
+      return {
+        current: lastTerm,
+        next: nextYearTerms[22], // 下一年的小寒
+        daysFromCurrent: Math.floor((localDate - lastTerm.localTime) / (24 * 60 * 60 * 1000)),
+        daysToNext: Math.floor((nextYearTerms[22].localTime - localDate) / (24 * 60 * 60 * 1000))
+      };
     }
     
     return null;
