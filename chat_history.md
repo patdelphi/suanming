@@ -212,3 +212,28 @@ No Math.random() occurrences in yijingAnalyzer.cjs. Already clean.
 - TypeScript 编译通过
 - Build 成功
 - 测试通过 (5/5)
+
+---
+
+## 2026-06-13 修复 JWT_SECRET 环境变量未加载问题
+
+### 问题
+服务器启动时报错：
+```
+Error: JWT_SECRET 环境变量未设置！为了安全考虑，生产环境必须设置强密码密钥。
+```
+
+### 原因
+`.env` 文件中已设置 `JWT_SECRET`，但服务器入口 `server/index.cjs` 未加载 `dotenv` 包来读取环境变量。
+
+### 修复
+1. 在 `server/index.cjs` 第1行添加 `require('dotenv').config()` 加载 `.env` 文件
+2. 安装 `dotenv` 依赖包
+
+### 涉及文件
+- `server/index.cjs` — 添加 dotenv 加载
+- `package.json` — 新增 dotenv 依赖
+
+### 验证
+- `npm install dotenv` 成功
+- 服务器可正常读取 JWT_SECRET 环境变量

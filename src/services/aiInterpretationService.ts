@@ -65,7 +65,7 @@ const generateBaziMarkdown = (data: any): string => {
     if (data.basic_info.personal_data) {
       const personal = data.basic_info.personal_data;
       markdown += `- **姓名：** ${personal.name || '未提供'}\n`;
-      markdown += `- **性别：** ${personal.gender === 'male' ? '男' : personal.gender === 'female' ? '女' : personal.gender || '未提供'}\n`;
+      markdown += `- **性别：** ${personal.gender || '未提供'}\n`;
       markdown += `- **出生日期：** ${personal.birth_date || '未提供'}\n`;
       markdown += `- **出生时间：** ${personal.birth_time || '未提供'}\n`;
       if (personal.birth_place) {
@@ -318,7 +318,7 @@ const generateZiweiMarkdown = (data: any): string => {
     if (data.basic_info.personal_data) {
       const personal = data.basic_info.personal_data;
       markdown += `- **姓名：** ${personal.name || '未提供'}\n`;
-      markdown += `- **性别：** ${personal.gender === 'male' ? '男' : personal.gender === 'female' ? '女' : personal.gender || '未提供'}\n`;
+      markdown += `- **性别：** ${personal.gender || '未提供'}\n`;
       markdown += `- **出生日期：** ${personal.birth_date || '未提供'}\n`;
       markdown += `- **出生时间：** ${personal.birth_time || '未提供'}\n`;
       if (personal.birth_place) {

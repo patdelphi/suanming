@@ -2,7 +2,7 @@ const express = require('express');
 const { getDB } = require('../database/index.cjs');
 const { authenticate } = require('../middleware/auth.cjs');
 const { AppError, asyncHandler } = require('../middleware/errorHandler.cjs');
-const InputValidator = require('../utils/inputValidator.cjs');
+const { inputValidator } = require('../utils/inputValidator.cjs');
 
 // 导入分析服务
 const BaziAnalyzer = require('../services/baziAnalyzer.cjs');
@@ -22,8 +22,7 @@ const AIEnhancedAnalysis = require('../services/common/AIEnhancedAnalysis.cjs');
 // 初始化AI增强分析服务
 const aiEnhancedAnalysis = new AIEnhancedAnalysis();
 
-// 创建验证器实例
-const validator = new InputValidator();
+
 
 /**
  * 使用统一的InputValidator验证出生数据
@@ -32,15 +31,15 @@ const validator = new InputValidator();
  */
 function validateBirthData(birth_data) {
   // 验证必填字段
-  validator.validateRequired(birth_data, '出生数据');
-  validator.validateRequired(birth_data.name, '姓名');
-  validator.validateRequired(birth_data.birth_date, '出生日期');
+  inputValidator.validateRequired(birth_data, '出生数据');
+  inputValidator.validateRequired(birth_data.name, '姓名');
+  inputValidator.validateRequired(birth_data.birth_date, '出生日期');
   
   // 验证长度
-  validator.validateLength(birth_data.name, '姓名', 1, 50);
+  inputValidator.validateLength(birth_data.name, '姓名', 1, 50);
   
   // 验证日期格式
-  validator.validatePattern(birth_data.birth_date, '出生日期', validator.validationRules.date, '出生日期格式应为 YYYY-MM-DD');
+  inputValidator.validatePattern(birth_data.birth_date, inputValidator.validationRules.date, '出生日期');
   
   // 验证日期有效性
   const birthDate = new Date(birth_data.birth_date);
@@ -57,7 +56,7 @@ function validateBirthData(birth_data) {
   
   // 验证出生时间格式（如果提供）
   if (birth_data.birth_time) {
-    validator.validatePattern(birth_data.birth_time, '出生时间', validator.validationRules.time, '出生时间格式应为 HH:MM');
+    inputValidator.validatePattern(birth_data.birth_time, inputValidator.validationRules.time, '出生时间');
     
     const [hours, minutes] = birth_data.birth_time.split(':').map(Number);
     if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {

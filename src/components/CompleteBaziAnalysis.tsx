@@ -435,7 +435,7 @@ const CompleteBaziAnalysis: React.FC<CompleteBaziAnalysisProps> = ({ birthDate, 
               </div>
               <div className="flex items-center space-x-2">
                 <User className="h-5 w-5" />
-                <span>{analysisData.basic_info?.personal_data?.gender === 'male' ? '男性' : analysisData.basic_info?.personal_data?.gender === 'female' ? '女性' : analysisData.basic_info?.personal_data?.gender}</span>
+                <span>{analysisData.basic_info?.personal_data?.gender || '未知'}</span>
               </div>
             </div>
           </CardHeader>

@@ -138,7 +138,7 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
       details: error.message
     });
   }
-});
+}));
 
 /**
  * 获取用户下载历史
@@ -185,7 +185,7 @@ router.get('/history', authenticate, asyncHandler(async (req, res) => {
       details: error.message
     });
   }
-});
+}));
 
 /**
  * 获取支持的格式和分析类型

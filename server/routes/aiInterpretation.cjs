@@ -69,7 +69,7 @@ router.post('/save', authenticate, asyncHandler(async (req, res) => {
       details: error.message
     });
   }
-});
+}));
 
 // 获取AI解读结果
 router.get('/get/:reading_id', authenticate, asyncHandler(async (req, res) => {
@@ -118,7 +118,7 @@ router.get('/get/:reading_id', authenticate, asyncHandler(async (req, res) => {
       details: error.message
     });
   }
-});
+}));
 
 // 获取用户的所有AI解读记录
 router.get('/list', authenticate, asyncHandler(async (req, res) => {
@@ -187,7 +187,7 @@ router.get('/list', authenticate, asyncHandler(async (req, res) => {
       details: error.message
     });
   }
-});
+}));
 
 // 删除AI解读结果
 router.delete('/delete/:reading_id', authenticate, asyncHandler(async (req, res) => {
@@ -218,6 +218,6 @@ router.delete('/delete/:reading_id', authenticate, asyncHandler(async (req, res)
       details: error.message
     });
   }
-});
+}));
 
 module.exports = router;

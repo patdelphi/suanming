@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -195,25 +196,12 @@ app.use('/api/qimen', qimenRoutes);
 // 静态文件服务 (用于生产环境)
 // 强制在 Koyeb 部署时启用静态文件服务
 const isProduction = process.env.NODE_ENV === 'production' || process.env.PORT === '8000';
-console.log('当前环境:', process.env.NODE_ENV);
-console.log('端口:', process.env.PORT);
-console.log('是否为生产环境:', isProduction);
 
 if (isProduction) {
   const distPath = path.join(__dirname, '../dist');
   const indexPath = path.join(distPath, 'index.html');
   
-  console.log('静态文件目录:', distPath);
-  console.log('index.html路径:', indexPath);
-  
-  // 检查文件是否存在
   const fs = require('fs');
-  console.log('dist目录存在:', fs.existsSync(distPath));
-  console.log('index.html存在:', fs.existsSync(indexPath));
-  
-  if (fs.existsSync(distPath)) {
-    console.log('dist目录内容:', fs.readdirSync(distPath));
-  }
   
   // 配置静态文件服务，明确设置MIME类型
   app.use(express.static(distPath, {

@@ -277,12 +277,22 @@ class DatabaseManager {
       
       // 检查是否已经支持qimen类型
       try {
+        // 检查是否有用户存在
+        const userCount = this.db.prepare('SELECT COUNT(*) as count FROM users').get();
+        if (userCount.count === 0) {
+          console.log('数据库中没有用户，跳过qimen类型测试');
+          return;
+        }
+        
+        // 获取第一个用户的ID
+        const firstUser = this.db.prepare('SELECT id FROM users LIMIT 1').get();
+        
         // 尝试插入一个qimen类型的测试记录来检查约束
         const testStmt = this.db.prepare(`
           INSERT INTO numerology_readings (user_id, reading_type, name) 
           VALUES (?, ?, ?)
         `);
-        const testResult = testStmt.run(1, 'qimen', 'test_qimen_support');
+        const testResult = testStmt.run(firstUser.id, 'qimen', 'test_qimen_support');
         
         // 如果插入成功，说明已经支持qimen，删除测试记录
         const deleteStmt = this.db.prepare('DELETE FROM numerology_readings WHERE id = ?');
