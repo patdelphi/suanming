@@ -5,6 +5,54 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [3.3.0] - 2026-06-13
+
+### 🐛 核心算法修复
+
+经过多轮交叉验证，修复了 **16个** 影响算命准确性的核心算法Bug：
+
+**八字命理 (7项)**
+- 日柱计算改用UTC日期 + 2000-01-07甲子日基准
+- 五虎遁月公式修正：`((yearStemIndex%5)*2 + lunarMonth + 1) % 10`
+- 月柱使用年柱有效年干（已含立春调整）
+- 年柱立春判断统一UTC时间比较
+- 节气计算牛顿迭代角度差改用(-180°,180°]范围
+- 节气查找扩展跨年列表（含上年大雪/冬至）
+- 月柱冗余判断移除（避免时区混流）
+
+**紫微斗数 (4项)**
+- 紫微星位置查找表全部重写（基于《紫微斗数全书》）
+- 添加缺失的廉贞星，修正天同偏移
+- 四化改用年柱天干（已含立春调整）
+- 五行局月干公式修正
+
+**奇门遁甲 (3项)**
+- 月柱改用节气确定（新增`getMonthGanZhiByDate`）
+- 日柱改用UTC日期计算
+- 修复时干为甲时地盘定位崩溃（甲隐遁）
+
+**万年历 (1项)**
+- 硬编码日柱数据修正
+
+**时间转换 (1项)**
+- `getDayGanZhi`改用UTC日期计算
+
+### ✅ 算法验证
+
+经过 **14个** 测试用例交叉验证，覆盖立春前后、冬至、子时跨日、年末等边界情况：
+- 八字四柱：全部正确 ✓
+- 紫微斗数：14主星分布正确 ✓
+- 奇门遁甲：节气/局数/值符值使正确 ✓
+- 易经占卜：上下卦/卦号/动爻正确 ✓
+
+### 📦 修改文件
+- `server/services/common/PreciseSolarTerms.cjs`
+- `server/services/calculators/BaziCalculator.cjs`
+- `server/services/calculators/ZiweiCalculator.cjs`
+- `server/utils/wanNianLi.cjs`
+- `server/utils/timeConverter.cjs`
+- `server/services/qimenAnalyzer.cjs`
+
 ## [3.2.0] - 2026-06-11
 
 ### 🐛 修复
