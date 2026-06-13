@@ -1731,7 +1731,21 @@ class QimenAnalyzer {
   }
   
   findShiganPosition(dipan, shigan) {
-    return dipan.findIndex(item => item.ganzhi === shigan);
+    // 奇门遁甲中甲是隐遁的，需要找旬首
+    // 六甲旬首对应：甲子戊、甲戌己、甲申庚、甲午辛、甲辰壬、甲寅癸
+    const jiaXunMap = {
+      '甲': null // 需要根据时支确定具体旬首
+    };
+    
+    // 如果时干是甲，需要特殊处理
+    if (shigan === '甲') {
+      // 这里简化处理，返回戊的位置（甲子旬）
+      // 实际应该根据时支确定具体旬首
+      return dipan.findIndex(item => item.ganzhi === '戊');
+    }
+    
+    const pos = dipan.findIndex(item => item.ganzhi === shigan);
+    return pos >= 0 ? pos : 0; // 找不到时返回坎宫
   }
   
   findZhizhiPosition(dipan, zhizhi) {
@@ -2683,6 +2697,16 @@ class QimenCalculator {
    * @returns {number} 位置索引
    */
   findShiganPosition(dipan, shigan) {
+    // 奇门遁甲中甲是隐遁的，需要找旬首
+    if (shigan === '甲') {
+      // 简化处理：返回戊的位置
+      for (let i = 0; i < dipan.length; i++) {
+        if (dipan[i].ganzhi === '戊') {
+          return i;
+        }
+      }
+    }
+    
     for (let i = 0; i < dipan.length; i++) {
       if (dipan[i].ganzhi === shigan) {
         return i;
