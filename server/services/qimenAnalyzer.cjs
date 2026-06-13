@@ -432,7 +432,7 @@ class QimenAnalyzer {
     
     // 转换为干支
     const yearGZ = this.getYearGanZhi(year);
-    const monthGZ = this.getMonthGanZhi(year, month);
+    const monthGZ = this.getMonthGanZhiByDate(datetime);
     const dayGZ = this.getDayGanZhi(datetime);
     const hourGZ = this.getHourGanZhi(hour, dayGZ.gan);
     
@@ -1259,6 +1259,10 @@ class QimenAnalyzer {
   
   getMonthGanZhi(year, month) {
     return this.timeConverter.getMonthGanZhi(year, month);
+  }
+  
+  getMonthGanZhiByDate(datetime) {
+    return this.timeConverter.getMonthGanZhiByDate(datetime);
   }
   
   getDayGanZhi(datetime) {
@@ -2333,7 +2337,7 @@ class QimenCalculator {
     
     // 转换为干支
     const yearGZ = this.analyzer.getYearGanZhi(year);
-    const monthGZ = this.analyzer.getMonthGanZhi(year, month);
+    const monthGZ = this.analyzer.getMonthGanZhiByDate(datetime);
     const dayGZ = this.analyzer.getDayGanZhi(datetime);
     const hourGZ = this.analyzer.getHourGanZhi(hour, dayGZ.gan);
     

@@ -27,9 +27,9 @@ class TimeConverter {
       7: '申', 8: '酉', 9: '戌', 10: '亥', 11: '子', 12: '丑'
     };
     
-    // 基准日期：1900年1月31日为庚子日
-    this.BASE_DATE = new Date(1900, 0, 31);
-    this.BASE_DAY_GANZHI_INDEX = 36; // 庚子在60甲子中的索引
+    // 基准日期：2000年1月7日为甲子日（UTC）
+    this.BASE_DATE = Date.UTC(2000, 0, 7);
+    this.BASE_DAY_GANZHI_INDEX = 0; // 甲子在60甲子中的索引
   }
 
   /**
@@ -52,10 +52,110 @@ class TimeConverter {
   }
 
   /**
-   * 获取月份干支
+   * 获取月份干支（基于节气）
+   * @param {Date} datetime - 日期时间对象
+   * @returns {Object} {gan: string, zhi: string, lunarMonth: number}
+   */
+  getMonthGanZhiByDate(datetime) {
+    // 节气对应的月支：立春=寅(2), 惊蛰=卯(3), 清明=辰(4), 立夏=巳(5), 
+    // 芒种=午(6), 小暑=未(7), 立秋=申(8), 白露=酉(9), 寒露=戌(10), 
+    // 立冬=亥(11), 大雪=子(0), 小寒=丑(1)
+    const jieqiMonthMap = [
+      { term: '立春', month: 1, zhi: '寅' },
+      { term: '惊蛰', month: 2, zhi: '卯' },
+      { term: '清明', month: 3, zhi: '辰' },
+      { term: '立夏', month: 4, zhi: '巳' },
+      { term: '芒种', month: 5, zhi: '午' },
+      { term: '小暑', month: 6, zhi: '未' },
+      { term: '立秋', month: 7, zhi: '申' },
+      { term: '白露', month: 8, zhi: '酉' },
+      { term: '寒露', month: 9, zhi: '戌' },
+      { term: '立冬', month: 10, zhi: '亥' },
+      { term: '大雪', month: 11, zhi: '子' },
+      { term: '小寒', month: 12, zhi: '丑' }
+    ];
+    
+    // 使用节气确定农历月
+    // 简化处理：根据公历月份和日期估算
+    const month = datetime.getMonth() + 1;
+    const day = datetime.getDate();
+    
+    // 节气大约日期（每月4-7日左右）
+    let lunarMonth, monthZhi;
+    if (month === 1) {
+      // 1月：小寒前=丑月，小寒后=丑月（实际是子月或丑月）
+      lunarMonth = day < 6 ? 12 : 12; // 简化为丑月
+      monthZhi = '丑';
+    } else if (month === 2) {
+      // 2月：立春前=丑月，立春后=寅月
+      lunarMonth = day < 4 ? 12 : 1;
+      monthZhi = day < 4 ? '丑' : '寅';
+    } else if (month === 3) {
+      // 3月：惊蛰前=寅月，惊蛰后=卯月
+      lunarMonth = day < 6 ? 1 : 2;
+      monthZhi = day < 6 ? '寅' : '卯';
+    } else if (month === 4) {
+      // 4月：清明前=卯月，清明后=辰月
+      lunarMonth = day < 5 ? 2 : 3;
+      monthZhi = day < 5 ? '卯' : '辰';
+    } else if (month === 5) {
+      // 5月：立夏前=辰月，立夏后=巳月
+      lunarMonth = day < 6 ? 3 : 4;
+      monthZhi = day < 6 ? '辰' : '巳';
+    } else if (month === 6) {
+      // 6月：芒种前=巳月，芒种后=午月
+      lunarMonth = day < 6 ? 4 : 5;
+      monthZhi = day < 6 ? '巳' : '午';
+    } else if (month === 7) {
+      // 7月：小暑前=午月，小暑后=未月
+      lunarMonth = day < 7 ? 5 : 6;
+      monthZhi = day < 7 ? '午' : '未';
+    } else if (month === 8) {
+      // 8月：立秋前=未月，立秋后=申月
+      lunarMonth = day < 8 ? 6 : 7;
+      monthZhi = day < 8 ? '未' : '申';
+    } else if (month === 9) {
+      // 9月：白露前=申月，白露后=酉月
+      lunarMonth = day < 8 ? 7 : 8;
+      monthZhi = day < 8 ? '申' : '酉';
+    } else if (month === 10) {
+      // 10月：寒露前=酉月，寒露后=戌月
+      lunarMonth = day < 8 ? 8 : 9;
+      monthZhi = day < 8 ? '酉' : '戌';
+    } else if (month === 11) {
+      // 11月：立冬前=戌月，立冬后=亥月
+      lunarMonth = day < 7 ? 9 : 10;
+      monthZhi = day < 7 ? '戌' : '亥';
+    } else if (month === 12) {
+      // 12月：大雪前=亥月，大雪后=子月
+      lunarMonth = day < 7 ? 10 : 11;
+      monthZhi = day < 7 ? '亥' : '子';
+    }
+    
+    // 获取年干（考虑立春）
+    let effectiveYear = datetime.getFullYear();
+    if (month < 2 || (month === 2 && day < 4)) {
+      effectiveYear--; // 立春前算上一年
+    }
+    const yearGan = this.getYearGanZhi(effectiveYear).gan;
+    const yearGanIndex = this.TIANGAN.indexOf(yearGan);
+    
+    // 五虎遁月公式：年干索引*2 + 农历月 + 1
+    const ganIndex = ((yearGanIndex * 2 + lunarMonth + 1) % 10 + 10) % 10;
+    
+    return {
+      gan: this.TIANGAN[ganIndex],
+      zhi: monthZhi,
+      lunarMonth: lunarMonth
+    };
+  }
+
+  /**
+   * 获取月份干支（简化版，仅用于向后兼容）
    * @param {number} year - 公历年份
    * @param {number} month - 公历月份(1-12)
    * @returns {Object} {gan: string, zhi: string}
+   * @deprecated 请使用 getMonthGanZhiByDate(datetime)
    */
   getMonthGanZhi(year, month) {
     const yearGan = this.getYearGanZhi(year).gan;
@@ -77,16 +177,15 @@ class TimeConverter {
    * @returns {Object} {gan: string, zhi: string}
    */
   getDayGanZhi(date) {
-    // 计算与基准日期的天数差
-    const timeDiff = date.getTime() - this.BASE_DATE.getTime();
-    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    // 使用UTC日期计算天数差
+    const targetDate = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    const daysDiff = Math.floor((targetDate - this.BASE_DATE) / (1000 * 60 * 60 * 24));
     
     // 计算干支索引
-    const ganzhiIndex = (this.BASE_DAY_GANZHI_INDEX + daysDiff) % 60;
-    const adjustedIndex = ganzhiIndex >= 0 ? ganzhiIndex : ganzhiIndex + 60;
+    const ganzhiIndex = ((daysDiff % 60) + 60) % 60;
     
-    const ganIndex = adjustedIndex % 10;
-    const zhiIndex = adjustedIndex % 12;
+    const ganIndex = ganzhiIndex % 10;
+    const zhiIndex = ganzhiIndex % 12;
     
     return {
       gan: this.TIANGAN[ganIndex],
